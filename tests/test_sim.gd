@@ -162,14 +162,17 @@ func _test_bolt_pierces_but_basic_attack_does_not() -> void:
 	var a := world.add_hero(SimConst.TEAM_DAWN)
 	var near := world.add_hero(SimConst.TEAM_DUSK)
 	var far := world.add_hero(SimConst.TEAM_DUSK)
+	# Les dégâts viennent de la fiche du héros : l'équilibrage peut les changer.
+	var bolt := HeroDefs.value(a, 1, "damage")
+	var shot := HeroDefs.value(a, 0, "damage")
 	world.step({a.id: _input(Vector2.ZERO, far.pos, SimConst.BTN_ABILITY_1)})
 	for i in 20:
 		world.step({a.id: _input(Vector2.ZERO, far.pos)})
-	_check(is_equal_approx(near.hp, 740.0) and is_equal_approx(far.hp, 740.0), "the bolt pierces and hits each enemy once")
+	_check(is_equal_approx(near.hp, 1000.0 - bolt) and is_equal_approx(far.hp, 1000.0 - bolt), "the bolt pierces and hits each enemy once")
 	world.step({a.id: _input(Vector2.ZERO, far.pos, SimConst.BTN_ATTACK)})
 	for i in 20:
 		world.step({a.id: _input(Vector2.ZERO, far.pos)})
-	_check(is_equal_approx(near.hp, 650.0) and is_equal_approx(far.hp, 740.0), "a basic attack stops on the first enemy")
+	_check(is_equal_approx(near.hp, 1000.0 - bolt - shot) and is_equal_approx(far.hp, 1000.0 - bolt), "a basic attack stops on the first enemy")
 
 
 func _test_no_friendly_fire() -> void:

@@ -47,7 +47,7 @@ const DEFS: Dictionary = {
 			},
 			{
 				"name_key": "ABILITY_SAGITTA_BOLT", "type": "projectile", "ai": "damage",
-				"cooldown": 6.0, "damage": 260.0, "speed": 30.0, "range": 16.0, "radius": 0.35, "pierce": true,
+				"cooldown": 7.0, "damage": 240.0, "speed": 30.0, "range": 16.0, "radius": 0.35, "pierce": true,
 			},
 			{
 				"name_key": "ABILITY_SAGITTA_STEP", "type": "dash", "ai": "escape",
@@ -55,7 +55,7 @@ const DEFS: Dictionary = {
 			},
 			{
 				"name_key": "ABILITY_SAGITTA_ULT", "type": "volley", "ai": "awaken", "awakening": true,
-				"cooldown": 0.0, "damage": 200.0, "speed": 30.0, "range": 14.0, "radius": 0.35, "pierce": true,
+				"cooldown": 0.0, "damage": 170.0, "speed": 30.0, "range": 14.0, "radius": 0.35, "pierce": true,
 				"count": 7.0, "spread": 50.0,
 			},
 		],
