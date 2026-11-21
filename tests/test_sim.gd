@@ -71,6 +71,12 @@ func _duel(pos_a: Vector2, pos_b: Vector2, hero_a: String = "sagitta", hero_b: S
 	return [world, a, b]
 
 
+## Dégâts de base de l'attaque de Théron, lus dans sa fiche : l'équilibrage peut les changer.
+func _shot() -> float:
+	var abilities: Array = HeroDefs.get_def("sagitta")["abilities"]
+	return abilities[0]["damage"]
+
+
 func _has_event(world: SimWorld, type: String) -> bool:
 	for ev: Array in world.events:
 		if ev[0] == type:
@@ -138,7 +144,7 @@ func _test_basic_attack_hits() -> void:
 	var b: SimHero = duel[2]
 	for i in 15:
 		world.step({a.id: _input(Vector2.ZERO, b.pos, SimConst.BTN_ATTACK)})
-	_check(is_equal_approx(b.hp, 910.0), "a basic attack deals its damage once (hp=%s)" % b.hp)
+	_check(is_equal_approx(b.hp, 1000.0 - _shot()), "a basic attack deals its damage once (hp=%s)" % b.hp)
 	_check(world.projectiles.is_empty(), "the projectile is consumed on hit")
 	_check(a.cooldowns[0] > 0.0, "the attack is on cooldown")
 
@@ -341,7 +347,7 @@ func _test_levels_scale_heroes() -> void:
 	_check(_has_event(world, "level"), "level events are emitted")
 	for i in 15:
 		world.step({a.id: _input(Vector2.ZERO, b.pos, SimConst.BTN_ATTACK)})
-	_check(is_equal_approx(b.max_hp - b.hp, 90.0 * 1.04 * 1.04), "a level raises damage by 4%% (dealt %s)" % (b.max_hp - b.hp))
+	_check(is_equal_approx(b.max_hp - b.hp, _shot() * 1.04 * 1.04), "a level raises damage by 4%% (dealt %s)" % (b.max_hp - b.hp))
 	b.hp = 1.0
 	world.step({a.id: _input(Vector2.ZERO, b.pos, SimConst.BTN_ABILITY_1)})
 	_steps(world, 0.5)
@@ -618,7 +624,7 @@ func _test_talents() -> void:
 	_check(HeroDefs.pending_talent_tier(a, 3) == -1 and a.talents == [1, 0, 0], "the choice is recorded")
 	for i in 15:
 		world.step({a.id: _input(Vector2.ZERO, b.pos, SimConst.BTN_ATTACK)})
-	var expected := 90.0 * 1.2 * SimConst.level_multiplier(3)
+	var expected := _shot() * 1.2 * SimConst.level_multiplier(3)
 	_check(is_equal_approx(b.max_hp - b.hp, expected), "the talent raises basic attack damage by 20%% (dealt %s)" % (b.max_hp - b.hp))
 	# Talent de recharge sur la ruée : il s'applique aussi à la prédiction du client.
 	world.team_level[SimConst.TEAM_DAWN] = 6
@@ -678,7 +684,7 @@ func _test_ether_and_awakening() -> void:
 	world.projectiles.clear()
 	for i in 15:
 		world.step({a.id: _input(Vector2.ZERO, b.pos, SimConst.BTN_ATTACK)})
-	_check(is_equal_approx(b.max_hp - b.hp, 90.0 * SimConst.AWAKEN_POWER), "damage is raised during the awakening (dealt %s)" % (b.max_hp - b.hp))
+	_check(is_equal_approx(b.max_hp - b.hp, _shot() * SimConst.AWAKEN_POWER), "damage is raised during the awakening (dealt %s)" % (b.max_hp - b.hp))
 	var start := a.pos
 	_steps(world, 1.0, {a.id: _input(Vector2.UP, Vector2(0.0, -50.0))})
 	_check(absf(start.y - a.pos.y - 6.0 * SimConst.AWAKEN_SPEED) < 0.05, "movement is faster during the awakening")
