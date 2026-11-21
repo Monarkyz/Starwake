@@ -9,11 +9,15 @@ static var player_name: String = ""
 static var address: String = DEFAULT_ADDRESS
 static var locale: String = ""
 static var hero: String = HeroDefs.DEFAULT_HERO
+## Commandes tactiles : activées d'office sur mobile, au choix sur ordinateur.
+static var touch: bool = false
 
 
 static func load_settings() -> void:
 	var cfg := ConfigFile.new()
+	touch = OS.has_feature("mobile")
 	if cfg.load(PATH) == OK:
+		touch = bool(cfg.get_value("player", "touch", touch)) or OS.has_feature("mobile")
 		player_name = str(cfg.get_value("player", "name", ""))
 		address = str(cfg.get_value("network", "address", DEFAULT_ADDRESS))
 		locale = str(cfg.get_value("ui", "locale", ""))
@@ -29,6 +33,7 @@ static func save_settings() -> void:
 	var cfg := ConfigFile.new()
 	cfg.set_value("player", "name", player_name)
 	cfg.set_value("player", "hero", hero)
+	cfg.set_value("player", "touch", touch)
 	cfg.set_value("network", "address", address)
 	cfg.set_value("ui", "locale", locale)
 	cfg.save(PATH)

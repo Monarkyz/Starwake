@@ -10,6 +10,7 @@ var _address_edit: LineEdit
 var _status: Label
 var _buttons: Array[Button] = []
 var _hero_buttons: Dictionary = {}  # id du héros -> Button
+var _controls_label: Label
 
 
 func _ready() -> void:
@@ -73,6 +74,19 @@ func _ready() -> void:
 		button.pressed.connect(func() -> void: Settings.set_locale(code))
 		languages.add_child(button)
 	box.add_child(languages)
+
+	# Sur ordinateur, on peut essayer les commandes tactiles à la souris.
+	if not OS.has_feature("mobile"):
+		var touch_toggle := CheckButton.new()
+		touch_toggle.text = "MENU_TOUCH"
+		touch_toggle.button_pressed = Settings.touch
+		touch_toggle.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		touch_toggle.toggled.connect(func(on: bool) -> void:
+			Settings.touch = on
+			Settings.save_settings()
+			_refresh_controls_label()
+		)
+		languages.add_child(touch_toggle)
 	box.add_child(_button("MENU_QUIT", func() -> void: get_tree().quit()))
 
 	_status = _label("", 15, Palette.GOLD)
@@ -84,14 +98,20 @@ func _ready() -> void:
 	goal.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(goal)
 
-	var controls := _label("MENU_CONTROLS", 13, Palette.TEXT_DIM)
-	controls.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	box.add_child(controls)
+	_controls_label = _label("MENU_CONTROLS", 13, Palette.TEXT_DIM)
+	_controls_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	box.add_child(_controls_label)
+	_refresh_controls_label()
 
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_TRANSLATION_CHANGED and not _hero_buttons.is_empty():
 		_refresh_hero_buttons()
+
+
+func _refresh_controls_label() -> void:
+	if _controls_label != null:
+		_controls_label.text = "MENU_CONTROLS_TOUCH" if Settings.touch else "MENU_CONTROLS"
 
 
 func _select_hero(def_id: String) -> void:

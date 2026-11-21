@@ -11,7 +11,9 @@ extends Node
 ##   --training               lancer l'entraînement local sans passer par le menu
 ##   --name=Nom               nom du joueur
 ##   --lang=fr                langue de l'interface pour ce lancement (fr ou en)
-##   --autopilot              le client joue tout seul (tests)
+##   --touch                  commandes tactiles (à la souris sur ordinateur)
+##   --autopilot              le client joue tout seul (tests) ; avec --touch, il joue en
+##                            posant des doigts virtuels sur les commandes tactiles
 ##   --quit-after=20          quitter après ce nombre de secondes (tests)
 ##   --exit-after-events=1    le serveur s'arrête après ce nombre d'événements de jeu (tests)
 ##   --screenshot=fichier.png enregistrer une image juste avant de quitter (tests)
@@ -26,6 +28,8 @@ var _client: GameClient
 var _view: GameView
 var _menu: MainMenu
 var _headless: bool = false
+var _touch_controls: TouchControls
+var _touch_layer: CanvasLayer
 
 
 func _ready() -> void:
@@ -47,7 +51,8 @@ func _ready() -> void:
 	if _opts.has("quit-after"):
 		get_tree().create_timer(float(_opts["quit-after"])).timeout.connect(_on_quit_after)
 
-	if _opts.has("server"):
+	# La version "serveur dédié" exportée se lance en serveur sans aucun argument.
+	if _opts.has("server") or OS.has_feature("dedicated_server"):
 		_run_dedicated_server()
 	elif _opts.has("connect"):
 		_join(str(_opts["connect"]), str(_opts.get("name", "Player")), str(_opts.get("hero", HeroDefs.DEFAULT_HERO)))
@@ -82,13 +87,15 @@ func _run_dedicated_server() -> void:
 	var port := int(_opts.get("port", DEFAULT_PORT))
 	_server = _make_server()
 	_server.exit_after_events = int(_opts.get("exit-after-events", 0))
-	var err := _server.start(port, int(_opts.get("bots", 0)), _opts.has("fill"))
+	# Sans consigne, la version serveur exportée complète les parties avec des bots.
+	var fill := _opts.has("fill") or (OS.has_feature("dedicated_server") and not _opts.has("bots"))
+	var err := _server.start(port, int(_opts.get("bots", 0)), fill)
 	if err != OK:
 		printerr("[server] cannot listen on port %d (%s)" % [port, error_string(err)])
 		get_tree().quit(1)
 		return
 	print("[server] Starwake %s listening port=%d bots=%d fill=%s" % [
-		ProjectSettings.get_setting("application/config/version"), port, int(_opts.get("bots", 0)), _opts.has("fill"),
+		ProjectSettings.get_setting("application/config/version"), port, int(_opts.get("bots", 0)), fill,
 	])
 
 
@@ -124,7 +131,7 @@ func _join(address: String, player_name: String, hero: String) -> void:
 	_client = GameClient.new()
 	_client.name = "Client"
 	add_child(_client)
-	if _opts.has("autopilot"):
+	if _opts.has("autopilot") and not _use_touch():
 		_client.input_source = AutopilotInput.new()
 	_client.state_changed.connect(_on_client_state)
 	if _menu != null:
@@ -139,16 +146,54 @@ func _on_client_state(state: GameClient.State) -> void:
 			print("[client] joined hero_id=%d" % _client.my_hero_id)
 			if _menu != null:
 				_menu.visible = false
+			if _use_touch():
+				_setup_touch()
 			if not _headless:
 				_view = GameView.new()
 				_view.setup(_client)
+				_view.touch_controls = _touch_controls
 				add_child(_view)
+				_view.hud.leave_requested.connect(_on_leave_requested)
+			elif _touch_controls != null:
+				# Sans écran (tests), les commandes tactiles vivent quand même dans l'arbre.
+				_touch_layer = CanvasLayer.new()
+				add_child(_touch_layer)
+				_touch_layer.add_child(_touch_controls)
 		GameClient.State.FAILED:
 			_end_session("STATUS_FAILED")
 		GameClient.State.DISCONNECTED:
 			_end_session("STATUS_DISCONNECTED")
 		GameClient.State.REJECTED:
 			_end_session("STATUS_" + _client.reject_reason)
+
+
+func _use_touch() -> bool:
+	return _opts.has("touch") or Settings.touch
+
+
+## Crée les commandes tactiles et les branche sur le client.
+func _setup_touch() -> void:
+	_touch_controls = TouchControls.new()
+	_touch_controls.client = _client
+	if _opts.has("autopilot"):
+		var pilot := TouchAutopilot.new()
+		pilot.controls = _touch_controls
+		_client.input_source = pilot
+	else:
+		var input := TouchInput.new()
+		input.controls = _touch_controls
+		_client.input_source = input
+	# Sur ordinateur, la souris joue le rôle d'un doigt.
+	if not OS.has_feature("mobile"):
+		Input.emulate_touch_from_mouse = true
+	print("[client] touch controls enabled")
+
+
+func _on_leave_requested() -> void:
+	if _menu != null:
+		_leave_game("")
+	else:
+		_on_quit_after()
 
 
 ## Fin de session subie (échec, coupure, refus) : retour au menu, ou arrêt s'il n'y en a pas.
@@ -166,6 +211,10 @@ func _leave_game(status: String) -> void:
 	if _view != null:
 		_view.queue_free()
 		_view = null
+	if _touch_layer != null:
+		_touch_layer.queue_free()
+		_touch_layer = null
+	_touch_controls = null
 	if _client != null:
 		_client.queue_free()
 		_client = null
@@ -201,9 +250,9 @@ func _on_quit_after() -> void:
 
 func _print_client_stats() -> void:
 	var stats := _client.stats
-	print("[client] stats state=%s snapshots=%d corrections=%d max_correction=%.3f max_units=%d" % [
+	print("[client] stats state=%s snapshots=%d corrections=%d max_correction=%.3f max_units=%d moves=%d actions=%d" % [
 		GameClient.State.keys()[_client.state], stats["snapshots"], stats["corrections"],
-		stats["max_correction"], stats["max_units"],
+		stats["max_correction"], stats["max_units"], stats["moves"], stats["actions"],
 	])
 
 

@@ -14,6 +14,8 @@ const BEAM_WIDTH: Array[float] = [0.14, 0.06, 0.5]
 var client: GameClient
 var camera: Camera3D
 var hud: Hud
+## Commandes tactiles à afficher par-dessus la partie (fournies par le point d'entrée), ou null.
+var touch_controls: TouchControls
 
 var _hero_views: Dictionary = {}  # id -> HeroView
 var _unit_views: Dictionary = {}  # id -> MeshInstance3D
@@ -25,6 +27,7 @@ var _team_ranks: Array[int] = [0, 0]
 var _focus: Vector3 = Vector3.ZERO
 var _focus_ready: bool = false
 var _time: float = 0.0
+var _aim_line: MeshInstance3D
 
 var _projectile_meshes: Array[SphereMesh] = []
 var _projectile_materials: Array[StandardMaterial3D] = []
@@ -58,12 +61,23 @@ func _ready() -> void:
 	hud = Hud.new()
 	hud.client = client
 	hud.camera = camera
+	hud.touch = touch_controls != null
 	layer.add_child(hud)
+	if touch_controls != null:
+		layer.add_child(touch_controls)
 
-	var input := LocalInput.new()
-	input.camera = camera
 	if client.input_source == null:
+		var input := LocalInput.new()
+		input.camera = camera
 		client.input_source = input
+
+	# Trait de visée affiché pendant qu'on vise au doigt.
+	_aim_line = MeshInstance3D.new()
+	_aim_line.mesh = _beam_mesh
+	_aim_line.material_override = _beam_materials[SimWorld.BEAM_STRUCTURE]
+	_aim_line.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_aim_line.visible = false
+	add_child(_aim_line)
 
 
 func _process(delta: float) -> void:
@@ -80,6 +94,7 @@ func _process(delta: float) -> void:
 	_sync_beams(delta)
 	hud.heroes = heroes
 	hud.units = units
+	_update_aim_line()
 
 	if snap != null:
 		for i in mini(snap.structures.size(), _structure_views.size()):
@@ -192,6 +207,25 @@ func _sync_beams(delta: float) -> void:
 	_beams = kept
 
 
+## Pendant une visée au doigt, montre sur le terrain où partira la capacité.
+func _update_aim_line() -> void:
+	_aim_line.visible = false
+	if touch_controls == null or client.local == null or not client.local.alive:
+		return
+	var aim: Array = touch_controls.preview()
+	var slot: int = aim[0]
+	if slot < 0:
+		return
+	var dir: Vector2 = aim[1]
+	var length := maxf(TouchInput.reach(client.local, slot), 3.0)
+	var from := client.get_local_render_pos()
+	var start := Vector3(from.x, 0.25, from.y)
+	var end := start + Vector3(dir.x, 0.0, dir.y) * length
+	_aim_line.look_at_from_position((start + end) * 0.5, end)
+	_aim_line.scale = Vector3(0.12, 0.05, length)
+	_aim_line.visible = true
+
+
 ## Effet de zone bref, sous forme de disque au sol : coup au corps à corps, onde, soin.
 func _spawn_disc(kind: int, from: Vector2, to: Vector2) -> void:
 	var center := from
@@ -232,7 +266,8 @@ func _build_environment() -> void:
 	var sun := DirectionalLight3D.new()
 	sun.light_color = Color("fff1d6")
 	sun.light_energy = 1.1
-	sun.shadow_enabled = true
+	# Les ombres coûtent cher sur téléphone.
+	sun.shadow_enabled = not OS.has_feature("mobile")
 	sun.directional_shadow_max_distance = 90.0
 	sun.rotation_degrees = Vector3(-55.0, -35.0, 0.0)
 	add_child(sun)

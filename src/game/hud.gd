@@ -12,14 +12,24 @@ const FEED_DURATION := 7.0
 const MINIMAP_WIDTH := 250.0
 const NEUTRAL := Color("8fd6cb")
 
+## Le joueur demande à quitter la partie (bouton tactile).
+signal leave_requested
+
 var client: GameClient
 var camera: Camera3D
+## Mise en page tactile : les capacités sont sur les boutons tactiles, la minicarte passe
+## en haut à droite, un bouton remplace la touche Échap.
+var touch: bool = false
 ## Héros et unités affichés à cette image, fournis par GameView.
 var heroes: Array[SimHero] = []
 var units: Array[SimUnit] = []
 
 var _feed: Array = []  # [{text, left}]
 var _font: Font
+## Zones touchables, recalculées à chaque image.
+var _talent_rects: Array[Rect2] = []
+var _leave_rect: Rect2 = Rect2()
+var _margins: Vector4 = Vector4.ZERO
 
 
 func _ready() -> void:
@@ -29,7 +39,30 @@ func _ready() -> void:
 	client.game_event.connect(_on_game_event)
 
 
+## Un talent se choisit aussi en le touchant ou en cliquant dessus ; le bouton Menu
+## (mise en page tactile) quitte la partie.
+func _input(event: InputEvent) -> void:
+	var pos := Vector2.INF
+	if event is InputEventScreenTouch and (event as InputEventScreenTouch).pressed:
+		pos = (event as InputEventScreenTouch).position
+	elif event is InputEventMouseButton:
+		var click := event as InputEventMouseButton
+		if click.pressed and click.button_index == MOUSE_BUTTON_LEFT:
+			pos = click.position
+	if pos == Vector2.INF:
+		return
+	for i in _talent_rects.size():
+		if _talent_rects[i].has_point(pos):
+			client.choose_talent(i + 1)
+			get_viewport().set_input_as_handled()
+			return
+	if touch and _leave_rect.has_point(pos):
+		get_viewport().set_input_as_handled()
+		leave_requested.emit()
+
+
 func _process(delta: float) -> void:
+	_margins = SafeArea.margins(self)
 	for entry: Dictionary in _feed:
 		entry["left"] -= delta
 	_feed = _feed.filter(func(entry: Dictionary) -> bool: return entry["left"] > 0.0)
@@ -46,8 +79,16 @@ func _draw() -> void:
 	_draw_top_bar(snap)
 	_draw_feed()
 	_draw_minimap(snap)
-	_text(Vector2(16.0, size.y - 16.0), tr("HUD_LEAVE_HINT"), 13, Palette.TEXT_DIM)
+	if touch:
+		_leave_rect = Rect2(_margins.x + 16.0, _margins.y + 16.0, 96.0, 46.0)
+		draw_rect(_leave_rect, Palette.PANEL)
+		draw_rect(_leave_rect, Palette.GROUND_LINE, false, 1.5)
+		draw_string(_font, _leave_rect.position + Vector2(0.0, 29.0), tr("HUD_MENU"),
+				HORIZONTAL_ALIGNMENT_CENTER, _leave_rect.size.x, 15, Palette.TEXT)
+	else:
+		_text(Vector2(16.0, size.y - 16.0), tr("HUD_LEAVE_HINT"), 13, Palette.TEXT_DIM)
 	_draw_ability_bar(me)
+	_talent_rects.clear()
 	if snap.match_over:
 		_draw_match_end(snap, me)
 		return
@@ -162,6 +203,11 @@ func _draw_ability_bar(me: SimHero) -> void:
 	var total := count * SLOT_SIZE.x + (count - 1) * SLOT_GAP
 	var left := (size.x - total) * 0.5
 	var top := size.y - SLOT_SIZE.y - 22.0
+	if touch:
+		# Les capacités sont sur les boutons tactiles : ne garder ici que la vie et l'éther.
+		total = 380.0
+		left = (size.x - total) * 0.5
+		top = size.y - _margins.w - 14.0
 
 	# Barre de vie du joueur, au-dessus des capacités.
 	var hp_bar := Rect2(left, top - 30.0, total, 18.0)
@@ -176,6 +222,8 @@ func _draw_ability_bar(me: SimHero) -> void:
 		draw_rect(Rect2(hp_bar.position, Vector2(hp_bar.size.x * clampf(me.shield / maxf(me.max_hp, 1.0), 0.0, 1.0), 4.0)), Color(0.85, 0.95, 1.0))
 	# Jauge d'éther, juste sous la vie.
 	_bar(Rect2(left, top - 8.0, total, 5.0), me.ether / SimConst.ETHER_MAX, ETHER_COLOR)
+	if touch:
+		return
 
 	for slot in count:
 		var ability: Dictionary = abilities[slot]
@@ -230,10 +278,12 @@ func _draw_talent_choice(me: SimHero) -> void:
 	var left := (size.x - box.x * 2.0 - gap) * 0.5
 	var top := size.y - SLOT_SIZE.y - 22.0 - 44.0 - box.y - 26.0
 	draw_rect(Rect2(left, top - 30.0, box.x * 2.0 + gap, 26.0), Palette.PANEL)
-	_text_centered(top - 11.0, tr("HUD_TALENT_TITLE") % SimConst.TALENT_LEVELS[tier], 16, Palette.GOLD)
+	var title_key := "HUD_TALENT_TITLE_TOUCH" if touch else "HUD_TALENT_TITLE"
+	_text_centered(top - 11.0, tr(title_key) % SimConst.TALENT_LEVELS[tier], 16, Palette.GOLD)
 	for i in 2:
 		var option: Dictionary = options[i]
 		var rect := Rect2(Vector2(left + i * (box.x + gap), top), box)
+		_talent_rects.append(rect)
 		draw_rect(rect, Palette.PANEL)
 		draw_rect(rect, Palette.GOLD, false, 1.5)
 		draw_string(_font, rect.position + Vector2(12.0, 26.0), "[%d]  %s" % [i + 1, tr(option["name_key"])],
@@ -253,6 +303,9 @@ func _draw_minimap(snap: SimSnapshot) -> void:
 	var half := arena.half_size
 	var map_size := Vector2(MINIMAP_WIDTH, MINIMAP_WIDTH * half.y / half.x)
 	var origin := size - map_size - Vector2(16.0, 16.0)
+	if touch:
+		# En bas à droite se trouvent les boutons : la minicarte monte dans le coin du haut.
+		origin = Vector2(size.x - _margins.z - map_size.x - 16.0, _margins.y + 16.0)
 	draw_rect(Rect2(origin - Vector2(3.0, 3.0), map_size + Vector2(6.0, 6.0)), Palette.PANEL)
 	draw_rect(Rect2(origin, map_size), Color(Palette.GROUND, 0.9))
 	var to_map := func(p: Vector2) -> Vector2:

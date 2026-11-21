@@ -7,7 +7,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 
 msgid "MENU_SUBTITLE"
-msgstr "Prototype — jalon 3 : héros, talents et éveil"
+msgstr "Prototype — jalon 4 : PC et mobile"
 
 msgid "MENU_NAME_PLACEHOLDER"
 msgstr "Ton nom"
@@ -308,3 +308,15 @@ msgstr "Grâce"
 
 msgid "TALENT_COLUMBA_3B_DESC"
 msgstr "Ismène se déplace 12 % plus vite."
+
+msgid "MENU_TOUCH"
+msgstr "Commandes tactiles"
+
+msgid "MENU_CONTROLS_TOUCH"
+msgstr "Pouce gauche : joystick · Attaque : maintenir le bouton · Capacités et éveil : toucher puis relâcher, glisser hors du bouton pour viser · Talents : toucher la proposition · Relique : rester immobile sur l'autel"
+
+msgid "HUD_MENU"
+msgstr "Menu"
+
+msgid "HUD_TALENT_TITLE_TOUCH"
+msgstr "Niveau %d : touche un talent pour le choisir"

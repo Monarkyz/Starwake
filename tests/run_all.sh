@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Lance tous les tests : règles du jeu, partie complète entre bots en accéléré, puis partie
-# réelle en réseau à 3 contre 3 entre un serveur, ses bots et deux clients.
-# (Les deux joueurs choisissent des héros différents et remplacent chacun un bot.)
+# Lance tous les tests : règles du jeu, commandes tactiles, session locale, partie complète
+# entre bots en accéléré, puis partie réelle en réseau à 3 contre 3 entre un serveur, ses
+# bots et deux clients (l'un aux commandes directes, l'autre aux commandes tactiles).
 # Usage : tests/run_all.sh        (variable GODOT pour choisir l'exécutable, "godot" par défaut)
 set -u
 
@@ -22,6 +22,23 @@ if grep -Eq "SCRIPT ERROR|Parse Error|FAIL:" "$LOGS/sim.log"; then
 	status=1
 fi
 
+echo "== Tests des commandes tactiles =="
+if ! "$GODOT" --headless --path . -s tests/test_touch.gd 2>&1 | tee "$LOGS/touch.log"; then
+	status=1
+fi
+if grep -Eq "SCRIPT ERROR|Parse Error|FAIL:" "$LOGS/touch.log"; then
+	status=1
+fi
+
+echo "== Session locale : jouer, quitter, relancer =="
+if ! "$GODOT" --headless --path . -s tests/test_session.gd 2>&1 | tee "$LOGS/session.log"; then
+	status=1
+fi
+if grep -Eq "SCRIPT ERROR|Parse Error|FAIL:" "$LOGS/session.log" || ! grep -q "2 rounds, 0 failures" "$LOGS/session.log"; then
+	echo "ÉCHEC : la session locale ne se relance pas correctement"
+	status=1
+fi
+
 echo "== Partie complète entre bots, en accéléré =="
 if ! "$GODOT" --headless --path . -s tests/test_match.gd 2>&1 | tee "$LOGS/match.log"; then
 	status=1
@@ -30,13 +47,13 @@ if grep -Eq "SCRIPT ERROR|Parse Error|FAIL:" "$LOGS/match.log"; then
 	status=1
 fi
 
-echo "== Partie en réseau : un serveur complété par des bots, deux clients en pilote automatique =="
+echo "== Partie en réseau : un serveur complété par des bots, un client clavier-souris et un client tactile =="
 "$GODOT" --headless --path . -- --server --port="$PORT" --fill --exit-after-events=1 --quit-after=250 >"$LOGS/server.log" 2>&1 &
 server_pid=$!
 sleep 2
 "$GODOT" --headless --path . -- --connect=127.0.0.1:"$PORT" --name=Alpha --hero=scutum --autopilot --quit-after=240 >"$LOGS/alpha.log" 2>&1 &
 alpha_pid=$!
-"$GODOT" --headless --path . -- --connect=127.0.0.1:"$PORT" --name=Beta --hero=columba --autopilot --quit-after=240 >"$LOGS/beta.log" 2>&1 &
+"$GODOT" --headless --path . -- --connect=127.0.0.1:"$PORT" --name=Beta --hero=columba --touch --autopilot --quit-after=240 >"$LOGS/beta.log" 2>&1 &
 beta_pid=$!
 
 wait "$alpha_pid"; alpha_code=$?
@@ -68,9 +85,16 @@ for name in alpha beta; do
 	seen="$(sed -n 's/.*max_units=\([0-9]*\).*/\1/p' "$LOGS/$name.log" | tail -1)"
 	[ "${snapshots:-0}" -ge 30 ] || { echo "ÉCHEC : $name a reçu trop peu d'états du serveur (${snapshots:-0})"; status=1; }
 	[ "${seen:-0}" -ge 8 ] || { echo "ÉCHEC : $name n'a pas vu les sbires (${seen:-0})"; status=1; }
+	moves="$(sed -n 's/.*moves=\([0-9]*\).*/\1/p' "$LOGS/$name.log" | tail -1)"
+	actions="$(sed -n 's/.*actions=\([0-9]*\).*/\1/p' "$LOGS/$name.log" | tail -1)"
+	[ "${moves:-0}" -ge 30 ] || { echo "ÉCHEC : $name ne s'est presque pas déplacé (${moves:-0} pas)"; status=1; }
+	[ "${actions:-0}" -ge 1 ] || { echo "ÉCHEC : $name n'a utilisé aucune capacité"; status=1; }
 	# Sur la même machine, la prédiction du client ne doit presque jamais s'écarter du serveur.
 	awk -v w="${worst:-99}" 'BEGIN { exit !(w < 1.5) }' || { echo "ÉCHEC : $name a subi une correction de ${worst:-?} unités"; status=1; }
 done
+# Jeu croisé : Beta joue par les commandes tactiles (doigts virtuels), Alpha par les commandes directes.
+grep -q "touch controls enabled" "$LOGS/beta.log" || { echo "ÉCHEC : Beta ne joue pas en tactile"; status=1; }
+if grep -q "touch controls enabled" "$LOGS/alpha.log"; then echo "ÉCHEC : Alpha ne devrait pas jouer en tactile"; status=1; fi
 if grep -Eq "SCRIPT ERROR|Parse Error" "$LOGS"/*.log; then
 	echo "ÉCHEC : erreur de script dans les journaux"
 	status=1

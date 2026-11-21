@@ -7,7 +7,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 
 msgid "MENU_SUBTITLE"
-msgstr "Prototype — milestone 3: heroes, talents and awakening"
+msgstr "Prototype — milestone 4: PC and mobile"
 
 msgid "MENU_NAME_PLACEHOLDER"
 msgstr "Your name"
@@ -308,3 +308,15 @@ msgstr "Grace"
 
 msgid "TALENT_COLUMBA_3B_DESC"
 msgstr "Ismene moves 12% faster."
+
+msgid "MENU_TOUCH"
+msgstr "Touch controls"
+
+msgid "MENU_CONTROLS_TOUCH"
+msgstr "Left thumb: joystick · Attack: hold the button · Abilities and awakening: touch then release, drag off the button to aim · Talents: touch the option · Relic: stand still on the altar"
+
+msgid "HUD_MENU"
+msgstr "Menu"
+
+msgid "HUD_TALENT_TITLE_TOUCH"
+msgstr "Level %d: touch a talent to pick it"

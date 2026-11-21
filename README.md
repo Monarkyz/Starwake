@@ -4,9 +4,40 @@ Jeu d'arène en équipe, en ligne, pour PC et mobile. Des guerriers en armure, l
 
 Le jeu reprend les grands principes du genre « arène de bataille en ligne » centré sur le jeu d'équipe : expérience partagée par toute l'équipe, talents à choisir par paliers à la place d'une boutique, cartes à objectifs, camps de mercenaires, parties de 10 à 15 minutes. L'univers est original.
 
-![Partie d'entraînement : un tank et son allié assiègent un temple](docs/jalon-3.png)
+![Partie d'entraînement avec les commandes tactiles](docs/jalon-4.png)
 
-## État : jalon 3, héros, talents et éveil
+## État : jalon 4, PC et mobile
+
+### Commandes tactiles
+
+Le jeu se joue au doigt comme au clavier et à la souris :
+
+- **Joystick virtuel** sous le pouce gauche : il apparaît là où le pouce se pose.
+- **Attaque de base** : maintenir le gros bouton.
+- **Capacités et éveil** : toucher puis relâcher le bouton. Sans glisser, la capacité vise toute seule (le héros adverse le plus proche à portée, sinon une unité, sinon un bâtiment ; les soins visent l'allié le plus blessé). En glissant le doigt hors du bouton, on vise à la main, et un trait montre la direction sur le terrain.
+- **Talents** : toucher la proposition voulue (un clic fonctionne aussi sur PC).
+- **Bouton Menu** en haut à gauche pour quitter la partie.
+
+L'interface se réorganise : la minicarte monte en haut à droite, les capacités sont sur les boutons, et tout se décale pour éviter l'encoche et les bords arrondis des téléphones. Le jeu passe en mode paysage.
+
+Les commandes tactiles s'activent toutes seules sur mobile. Sur ordinateur, l'interrupteur **Commandes tactiles** du menu permet de les essayer à la souris (un seul doigt à la fois).
+
+### Jeu croisé
+
+Les joueurs sur PC et sur mobile se connectent au même serveur et jouent dans les mêmes parties : le serveur ne fait aucune différence entre eux. La visée automatique du tactile compense la précision de la souris.
+
+### Versions prêtes à jouer
+
+À chaque envoi sur `main`, GitHub fabrique quatre versions, à télécharger depuis l'onglet **Actions** du dépôt (exécution « Build », rubrique « Artifacts ») :
+
+| Version | Contenu | Remarque |
+|---|---|---|
+| `starwake-windows` | `Starwake.exe` | Se lance sans installer Godot |
+| `starwake-linux` | `starwake.x86_64` | Se lance sans installer Godot |
+| `starwake-serveur-linux` | `starwake-server.x86_64` | Serveur dédié : se lance sans argument et complète les parties avec des bots |
+| `starwake-android` | `starwake.apk` | APK de test, à installer à la main sur un téléphone Android |
+
+Il n'y a pas de version iOS : la fabriquer demande un Mac et un compte développeur Apple.
 
 ### Trois héros
 
@@ -36,14 +67,15 @@ Les bots jouent les trois héros et choisissent leurs talents. En entraînement 
 
 ### Déjà en place
 
+- **Les héros** (jalon 3) : les trois héros ci-dessus, leurs talents, l'éther, l'éveil, les rangs d'armures et les bots.
 - **La carte du sanctuaire** (jalon 2) : deux voies de sbires, des temples à détruire dans l'ordre, le sanctuaire final dont la chute donne la victoire, la relique à canaliser au centre, deux camps de mercenaires, l'expérience d'équipe, les fontaines de soin.
 - **Le socle en ligne** (jalon 1) : serveur dédié qui fait autorité, jusqu'à 6 joueurs (3 contre 3), client qui prédit le déplacement de son héros, interface en français et en anglais.
 
-Ce qui n'existe pas encore : les neuf autres héros, les commandes tactiles, le tutoriel, le matchmaking. Les modèles sont des formes simples en attendant les packs d'assets, et l'équilibrage n'a été réglé que sur des parties entre bots.
+Ce qui n'existe pas encore : les neuf autres héros, le tutoriel, le matchmaking, la version iOS. Les modèles sont des formes simples en attendant les packs d'assets, et l'équilibrage n'a été réglé que sur des parties entre bots.
 
 ## Lancer le jeu
 
-Il faut [Godot 4.7](https://godotengine.org/download) (version standard, sans .NET).
+Le plus simple est de télécharger une version prête à jouer (voir plus haut). Pour lancer le jeu depuis les sources, il faut [Godot 4.7](https://godotengine.org/download) (version standard, sans .NET).
 
 1. Ouvrir le dossier du dépôt dans Godot (« Importer », puis choisir `project.godot`).
 2. Appuyer sur F5.
@@ -65,7 +97,7 @@ Il faut [Godot 4.7](https://godotengine.org/download) (version standard, sans .N
 
 ### Jouer à plusieurs
 
-Lancer un serveur dédié, depuis le dossier du dépôt :
+Lancer la version serveur téléchargée, sans argument, ou bien un serveur depuis les sources, dans le dossier du dépôt :
 
 ```bash
 godot --headless --path . -- --server --port=24565 --fill
@@ -87,11 +119,13 @@ Options du serveur, à placer après `--` :
 tests/run_all.sh
 ```
 
-Le script lance trois séries de tests :
+Le script lance cinq séries de tests :
 
 1. les règles du jeu, une par une (déplacements, capacités des trois héros, talents, éther et éveil, rangs d'armures, sbires, temples, relique, camps, expérience, format réseau) ;
-2. deux parties complètes entre six bots, simulées en accéléré, qui doivent se terminer par la chute d'un sanctuaire en 5 à 25 minutes de jeu ;
-3. une vraie partie en réseau à 3 contre 3 : un serveur complété par des bots et deux clients en pilote automatique, qui doivent remplacer chacun un bot avec le héros choisi, voir les sbires et provoquer un premier événement de jeu.
+2. les commandes tactiles : des doigts virtuels sur le joystick et les boutons, visée automatique et manuelle ;
+3. une session locale : jouer, quitter, relancer une partie dans le même processus ;
+4. deux parties complètes entre six bots, simulées en accéléré, qui doivent se terminer par la chute d'un sanctuaire en 5 à 25 minutes de jeu ;
+5. une vraie partie en réseau à 3 contre 3 : un serveur complété par des bots, un client aux commandes directes et un client aux commandes tactiles, qui doivent remplacer chacun un bot avec le héros choisi, voir les sbires, agir et provoquer un premier événement de jeu.
 
 Si Godot n'est pas dans le `PATH`, indiquer son chemin : `GODOT=/chemin/vers/godot tests/run_all.sh`.
 
@@ -134,7 +168,7 @@ Trois règles tiennent l'ensemble :
 1. **Socle en ligne sur PC** (fait) : serveur dédié, un héros, des joueurs qui se déplacent et se battent.
 2. **Carte du sanctuaire** (fait) : voies, sbires, temples à franchir, reliques à capturer, camps de mercenaires, expérience d'équipe.
 3. **Trois premiers héros** (fait) : tank, assassin et soutien, avec talents, jauge d'éther, éveil et rangs d'armures ; bots pour compléter les parties.
-4. **Mobile** : commandes tactiles et jeu croisé avec le PC.
+4. **Mobile** (fait, à valider sur un vrai téléphone) : commandes tactiles, jeu croisé avec le PC, versions Windows, Linux et Android fabriquées automatiquement.
 5. **Héros 4 à 12**, par lots de trois.
 6. **Tutoriel scénarisé**.
 

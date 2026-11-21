@@ -29,7 +29,7 @@ var roster: Dictionary = {}  # hero_id -> [nom, équipe, est_un_bot]
 var reject_reason: String = ""
 ## Objet doté de sample(client) -> SimInput : clavier/souris, tactile ou pilote automatique.
 var input_source: RefCounted
-var stats: Dictionary = {"snapshots": 0, "corrections": 0, "max_correction": 0.0, "max_units": 0}
+var stats: Dictionary = {"snapshots": 0, "corrections": 0, "max_correction": 0.0, "max_units": 0, "moves": 0, "actions": 0}
 
 var _peer: ENetMultiplayerPeer
 var _mp_path: NodePath
@@ -58,7 +58,11 @@ func _enter_tree() -> void:
 func _exit_tree() -> void:
 	if _peer != null:
 		_peer.close()
-	get_tree().set_multiplayer(null, _mp_path)
+	# La branche réseau n'est retirée qu'une fois ce nœud et ses enfants sortis de l'arbre :
+	# le moteur finit ainsi de délier le nœud "Net" avant qu'elle ne disparaisse.
+	var tree := get_tree()
+	var path := _mp_path
+	tree_exited.connect(func() -> void: tree.set_multiplayer(null, path), CONNECT_ONE_SHOT)
 
 
 func _ready() -> void:
@@ -226,6 +230,10 @@ func _physics_process(_delta: float) -> void:
 		cmd.aim = local.pos + local.facing
 	_seq += 1
 	cmd.seq = _seq
+	if cmd.move.length_squared() > 0.01:
+		stats["moves"] += 1
+	if cmd.buttons != 0:
+		stats["actions"] += 1
 	_pending.append(cmd)
 	if _pending.size() > 90:
 		_pending.pop_front()

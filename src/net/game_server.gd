@@ -41,7 +41,11 @@ func _enter_tree() -> void:
 func _exit_tree() -> void:
 	if _peer != null:
 		_peer.close()
-	get_tree().set_multiplayer(null, _mp_path)
+	# La branche réseau n'est retirée qu'une fois ce nœud et ses enfants sortis de l'arbre :
+	# le moteur finit ainsi de délier le nœud "Net" avant qu'elle ne disparaisse.
+	var tree := get_tree()
+	var path := _mp_path
+	tree_exited.connect(func() -> void: tree.set_multiplayer(null, path), CONNECT_ONE_SHOT)
 
 
 func _ready() -> void:
