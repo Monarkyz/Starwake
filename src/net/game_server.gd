@@ -11,6 +11,8 @@ const MAX_INPUT_QUEUE := 5
 ## Délai laissé à un pair connecté pour envoyer sa demande d'entrée.
 const JOIN_TIMEOUT := 5.0
 const BOT_NAMES: Array[String] = ["Orion", "Véga", "Altaïr", "Sirius", "Rigel", "Deneb"]
+## Héros donnés aux bots d'une équipe, dans l'ordre : un tank, un assassin, un soutien.
+const BOT_HEROES: Array[String] = ["scutum", "sagitta", "columba"]
 
 var world: SimWorld
 var net: NetBridge
@@ -19,6 +21,9 @@ var net: NetBridge
 var exit_after_events: int = 0
 ## Événements de jeu comptés depuis le démarrage.
 var event_count: int = 0
+## Si vrai, des bots occupent toutes les places libres : un joueur qui arrive en remplace
+## un, un joueur qui part est remplacé.
+var fill_bots: bool = false
 
 var _peer: ENetMultiplayerPeer
 var _players: Dictionary = {}  # peer_id -> {hero_id, queue, last, last_seq}
@@ -45,9 +50,10 @@ func _ready() -> void:
 	add_child(net)
 	net.join_requested.connect(_on_join_requested)
 	net.input_received.connect(_on_input_received)
+	net.talent_requested.connect(_on_talent_requested)
 
 
-func start(port: int, bot_count: int = 0) -> Error:
+func start(port: int, bot_count: int = 0, fill: bool = false) -> Error:
 	world = SimWorld.new()
 	_peer = ENetMultiplayerPeer.new()
 	# Deux connexions de plus que de places, pour pouvoir répondre "complet".
@@ -59,8 +65,10 @@ func start(port: int, bot_count: int = 0) -> Error:
 	multiplayer.multiplayer_peer = _peer
 	multiplayer.peer_connected.connect(_on_peer_connected)
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
-	for i in mini(bot_count, SimConst.MAX_PLAYERS - 1):
-		_add_bot(i)
+	fill_bots = fill
+	var wanted := SimConst.MAX_PLAYERS if fill else mini(bot_count, SimConst.MAX_PLAYERS - 1)
+	for i in wanted:
+		_add_bot(_smaller_team())
 	return OK
 
 
@@ -81,6 +89,8 @@ func _physics_process(_delta: float) -> void:
 			inputs[hero.id] = brain.think(hero, world)
 
 	world.step(inputs)
+	if world.tick % SimConst.TICK_RATE == 0:
+		_pick_bot_talents()
 
 	var peers := _connected_peers()
 	var snapshot := world.to_snapshot()
@@ -129,15 +139,75 @@ func _log_event(ev: Array) -> void:
 			print("[server] match end winner=%d time=%ds" % [ev[1], int(world.tick * SimConst.DT)])
 
 
-func _add_bot(index: int) -> void:
-	var team := _smaller_team()
-	var hero := world.add_hero(team)
+func _add_bot(team: int) -> void:
+	# Compléter l'équipe avec le premier rôle qui lui manque.
+	var present: Array = []
+	for id in world.heroes:
+		var mate: SimHero = world.heroes[id]
+		if mate.team == team:
+			present.append(mate.def_id)
+	var def_id: String = BOT_HEROES[world.team_size(team) % BOT_HEROES.size()]
+	for candidate in BOT_HEROES:
+		if not present.has(candidate):
+			def_id = candidate
+			break
+	var hero := world.add_hero(team, def_id)
 	var brain := BotBrain.new()
-	# Les deux premiers bots d'une équipe tiennent chacun une voie, le troisième circule.
+	# Les deux premiers emplacements d'une équipe tiennent chacun une voie, le troisième circule.
 	brain.lane = hero.spawn_slot % 2
 	brain.roamer = hero.spawn_slot >= 2
 	_bots.append({"hero_id": hero.id, "brain": brain})
-	_roster[hero.id] = [BOT_NAMES[index % BOT_NAMES.size()], team, true]
+	var used: Array = []
+	for row: Array in _roster.values():
+		used.append(row[0])
+	var bot_name := BOT_NAMES[0]
+	for candidate in BOT_NAMES:
+		if not used.has(candidate):
+			bot_name = candidate
+			break
+	_roster[hero.id] = [bot_name, team, true]
+
+
+func _remove_bot(bot: Dictionary) -> void:
+	var hero_id: int = bot["hero_id"]
+	_bots.erase(bot)
+	_roster.erase(hero_id)
+	world.remove_hero(hero_id)
+
+
+## Bot à remplacer par un joueur : dans l'équipe qui compte le moins de joueurs, de
+## préférence celui qui joue le héros demandé.
+func _bot_to_replace(def_id: String) -> Dictionary:
+	var humans: Array[int] = [0, 0]
+	for peer_id in _players:
+		var hero: SimHero = world.heroes.get(_players[peer_id]["hero_id"])
+		if hero != null:
+			humans[hero.team] += 1
+	var team := SimConst.TEAM_DUSK if humans[SimConst.TEAM_DUSK] < humans[SimConst.TEAM_DAWN] else SimConst.TEAM_DAWN
+	var fallback: Dictionary = {}
+	for order: int in [team, 1 - team]:
+		for bot: Dictionary in _bots:
+			var hero: SimHero = world.heroes.get(bot["hero_id"])
+			if hero == null or hero.team != order:
+				continue
+			if hero.def_id == def_id:
+				return bot
+			if fallback.is_empty():
+				fallback = bot
+		if not fallback.is_empty():
+			return fallback
+	return fallback
+
+
+## Les bots prennent un talent au hasard dès qu'un palier s'ouvre.
+func _pick_bot_talents() -> void:
+	for bot: Dictionary in _bots:
+		var hero: SimHero = world.heroes.get(bot["hero_id"])
+		if hero == null:
+			continue
+		var tier := HeroDefs.pending_talent_tier(hero, world.team_level[hero.team])
+		if tier >= 0:
+			world.choose_talent(hero.id, tier, randi_range(1, 2))
 
 
 func _smaller_team() -> int:
@@ -159,28 +229,44 @@ func _on_peer_disconnected(peer_id: int) -> void:
 		return
 	var hero_id: int = player["hero_id"]
 	print("[server] leave name=%s" % _hero_name(hero_id))
+	var hero: SimHero = world.heroes.get(hero_id)
 	_players.erase(peer_id)
 	_roster.erase(hero_id)
 	world.remove_hero(hero_id)
+	if fill_bots and hero != null:
+		_add_bot(hero.team)
 	_broadcast_roster()
 
 
-func _on_join_requested(peer_id: int, player_name: String, version: int) -> void:
+func _on_join_requested(peer_id: int, player_name: String, version: int, hero_def: String) -> void:
 	if _players.has(peer_id):
 		return
 	if version != SimConst.PROTOCOL_VERSION:
 		_reject(peer_id, "REJECT_VERSION")
 		return
-	if world.heroes.size() >= SimConst.MAX_PLAYERS:
-		_reject(peer_id, "REJECT_FULL")
-		return
+	var def_id := hero_def if HeroDefs.has_hero(hero_def) else HeroDefs.DEFAULT_HERO
 	var team := _smaller_team()
-	var hero := world.add_hero(team)
+	if world.heroes.size() >= SimConst.MAX_PLAYERS:
+		# Partie pleine : un joueur ne peut entrer qu'à la place d'un bot.
+		var bot := _bot_to_replace(def_id)
+		if bot.is_empty():
+			_reject(peer_id, "REJECT_FULL")
+			return
+		var replaced: SimHero = world.heroes[bot["hero_id"]]
+		team = replaced.team
+		_remove_bot(bot)
+	var hero := world.add_hero(team, def_id)
 	_players[peer_id] = {"hero_id": hero.id, "queue": [], "last": SimInput.new(), "last_seq": 0}
 	_roster[hero.id] = [_clean_name(player_name), team, false]
-	print("[server] join name=%s team=%d" % [_hero_name(hero.id), team])
+	print("[server] join name=%s team=%d hero=%s heroes=%d" % [_hero_name(hero.id), team, def_id, world.heroes.size()])
 	net.s2c_welcome.rpc_id(peer_id, {"hero_id": hero.id, "tick": world.tick})
 	_broadcast_roster()
+
+
+func _on_talent_requested(peer_id: int, tier: int, choice: int) -> void:
+	var player: Dictionary = _players.get(peer_id, {})
+	if not player.is_empty():
+		world.choose_talent(player["hero_id"], tier, choice)
 
 
 func _on_input_received(peer_id: int, data: PackedByteArray) -> void:

@@ -7,7 +7,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 
 msgid "MENU_SUBTITLE"
-msgstr "Prototype — milestone 2: the sanctuary"
+msgstr "Prototype — milestone 3: heroes, talents and awakening"
 
 msgid "MENU_NAME_PLACEHOLDER"
 msgstr "Your name"
@@ -25,7 +25,7 @@ msgid "MENU_QUIT"
 msgstr "Quit"
 
 msgid "MENU_CONTROLS"
-msgstr "WASD: move · Mouse: aim · Left click: attack · Right click: Sidereal Bolt · Space: Comet Step · Esc: menu"
+msgstr "WASD: move · Mouse: aim · Left click, right click, Space: abilities · R: awaken when the ether gauge is full · 1 or 2: pick a talent · Esc: menu"
 
 msgid "DEFAULT_PLAYER_NAME"
 msgstr "Player"
@@ -131,3 +131,180 @@ msgstr "Team %s recruits mercenaries"
 
 msgid "FEED_LEVEL"
 msgstr "Your team reaches level %d"
+
+msgid "ROLE_ASSASSIN"
+msgstr "Assassin"
+
+msgid "ROLE_TANK"
+msgstr "Tank"
+
+msgid "ROLE_SUPPORT"
+msgstr "Support"
+
+msgid "HERO_SCUTUM"
+msgstr "Brontes of the Shield"
+
+msgid "HERO_COLUMBA"
+msgstr "Ismene of the Dove"
+
+msgid "ABILITY_SAGITTA_ULT"
+msgstr "Star Rain"
+
+msgid "ABILITY_SCUTUM_ATTACK"
+msgstr "Shield Bash"
+
+msgid "ABILITY_SCUTUM_SHOCK"
+msgstr "Shockwave"
+
+msgid "ABILITY_SCUTUM_WALL"
+msgstr "Rampart"
+
+msgid "ABILITY_SCUTUM_ULT"
+msgstr "Earthquake"
+
+msgid "ABILITY_COLUMBA_ATTACK"
+msgstr "Silver Feather"
+
+msgid "ABILITY_COLUMBA_HEAL"
+msgstr "Dawn Song"
+
+msgid "ABILITY_COLUMBA_SNARE"
+msgstr "Snare"
+
+msgid "ABILITY_COLUMBA_ULT"
+msgstr "New Dawn"
+
+msgid "KEY_AWAKEN"
+msgstr "R"
+
+msgid "RANK_BRONZE"
+msgstr "Bronze"
+
+msgid "RANK_SILVER"
+msgstr "Silver"
+
+msgid "RANK_GOLD"
+msgstr "Gold"
+
+msgid "HUD_READY"
+msgstr "Ready"
+
+msgid "HUD_STUNNED"
+msgstr "Stunned"
+
+msgid "HUD_TALENT_TITLE"
+msgstr "Level %d: pick a talent with key 1 or 2"
+
+msgid "FEED_RANK"
+msgstr "Your team's armor rises to %s rank"
+
+msgid "FEED_AWAKEN"
+msgstr "%s awakens"
+
+msgid "TALENT_SAGITTA_1A"
+msgstr "Honed Tip"
+
+msgid "TALENT_SAGITTA_1A_DESC"
+msgstr "Star Shot deals 20% more damage."
+
+msgid "TALENT_SAGITTA_1B"
+msgstr "Light Quiver"
+
+msgid "TALENT_SAGITTA_1B_DESC"
+msgstr "Sidereal Bolt recharges 25% faster."
+
+msgid "TALENT_SAGITTA_2A"
+msgstr "Spyglass"
+
+msgid "TALENT_SAGITTA_2A_DESC"
+msgstr "Sidereal Bolt reaches 30% farther."
+
+msgid "TALENT_SAGITTA_2B"
+msgstr "Ether Stride"
+
+msgid "TALENT_SAGITTA_2B_DESC"
+msgstr "Comet Step recharges 35% faster."
+
+msgid "TALENT_SAGITTA_3A"
+msgstr "Burning Constellation"
+
+msgid "TALENT_SAGITTA_3A_DESC"
+msgstr "Sidereal Bolt deals 40% more damage."
+
+msgid "TALENT_SAGITTA_3B"
+msgstr "Stellar Breath"
+
+msgid "TALENT_SAGITTA_3B_DESC"
+msgstr "Theron moves 12% faster."
+
+msgid "TALENT_SCUTUM_1A"
+msgstr "Thick Hide"
+
+msgid "TALENT_SCUTUM_1A_DESC"
+msgstr "Brontes gains 15% max health."
+
+msgid "TALENT_SCUTUM_1B"
+msgstr "Iron Grip"
+
+msgid "TALENT_SCUTUM_1B_DESC"
+msgstr "Shield Bash deals 25% more damage."
+
+msgid "TALENT_SCUTUM_2A"
+msgstr "Lasting Rampart"
+
+msgid "TALENT_SCUTUM_2A_DESC"
+msgstr "Rampart absorbs 40% more damage."
+
+msgid "TALENT_SCUTUM_2B"
+msgstr "Long Wave"
+
+msgid "TALENT_SCUTUM_2B_DESC"
+msgstr "Shockwave stuns 50% longer."
+
+msgid "TALENT_SCUTUM_3A"
+msgstr "Colossus"
+
+msgid "TALENT_SCUTUM_3A_DESC"
+msgstr "Brontes gains 20% max health."
+
+msgid "TALENT_SCUTUM_3B"
+msgstr "Swift Rampart"
+
+msgid "TALENT_SCUTUM_3B_DESC"
+msgstr "Rampart recharges 30% faster."
+
+msgid "TALENT_COLUMBA_1A"
+msgstr "Clear Song"
+
+msgid "TALENT_COLUMBA_1A_DESC"
+msgstr "Dawn Song heals 20% more."
+
+msgid "TALENT_COLUMBA_1B"
+msgstr "Keen Feather"
+
+msgid "TALENT_COLUMBA_1B_DESC"
+msgstr "Silver Feather deals 20% more damage."
+
+msgid "TALENT_COLUMBA_2A"
+msgstr "Wide Halo"
+
+msgid "TALENT_COLUMBA_2A_DESC"
+msgstr "Dawn Song's area is 35% wider."
+
+msgid "TALENT_COLUMBA_2B"
+msgstr "Clinging Snare"
+
+msgid "TALENT_COLUMBA_2B_DESC"
+msgstr "Snare slows 50% longer."
+
+msgid "TALENT_COLUMBA_3A"
+msgstr "Living Spring"
+
+msgid "TALENT_COLUMBA_3A_DESC"
+msgstr "Dawn Song recharges 25% faster."
+
+msgid "TALENT_COLUMBA_3B"
+msgstr "Grace"
+
+msgid "TALENT_COLUMBA_3B_DESC"
+msgstr "Ismene moves 12% faster."

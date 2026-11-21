@@ -2,13 +2,14 @@ class_name MainMenu
 extends Control
 ## Menu principal : nom du joueur, serveur à rejoindre, entraînement local, langue.
 
-signal join_requested(address: String, player_name: String)
-signal training_requested(player_name: String)
+signal join_requested(address: String, player_name: String, hero: String)
+signal training_requested(player_name: String, hero: String)
 
 var _name_edit: LineEdit
 var _address_edit: LineEdit
 var _status: Label
 var _buttons: Array[Button] = []
+var _hero_buttons: Dictionary = {}  # id du héros -> Button
 
 
 func _ready() -> void:
@@ -20,19 +21,37 @@ func _ready() -> void:
 	add_child(center)
 
 	var box := VBoxContainer.new()
-	box.custom_minimum_size = Vector2(440.0, 0.0)
-	box.add_theme_constant_override("separation", 12)
+	box.custom_minimum_size = Vector2(560.0, 0.0)
+	box.add_theme_constant_override("separation", 10)
 	center.add_child(box)
 
-	var title := _label("STARWAKE", 68, Palette.GOLD)
+	var title := _label("STARWAKE", 60, Palette.GOLD)
 	title.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 	box.add_child(title)
 	box.add_child(_label("MENU_SUBTITLE", 16, Palette.TEXT_DIM))
-	box.add_child(_spacer(12.0))
 
 	_name_edit = _line_edit("MENU_NAME_PLACEHOLDER", Settings.player_name)
 	_name_edit.max_length = 16
 	box.add_child(_name_edit)
+
+	# Choix du héros : un bouton par héros, avec son rôle.
+	var heroes := HBoxContainer.new()
+	heroes.add_theme_constant_override("separation", 8)
+	for def_id: String in HeroDefs.ids():
+		var def: Dictionary = HeroDefs.get_def(def_id)
+		var button := Button.new()
+		button.toggle_mode = true
+		button.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+		button.custom_minimum_size = Vector2(0.0, 58.0)
+		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		button.add_theme_font_size_override("font_size", 13)
+		button.set_meta("name_key", def["name_key"])
+		button.set_meta("role_key", def["role_key"])
+		button.pressed.connect(func() -> void: _select_hero(def_id))
+		heroes.add_child(button)
+		_hero_buttons[def_id] = button
+	box.add_child(heroes)
+	_select_hero(Settings.hero)
 	box.add_child(_button("MENU_TRAINING", _on_training))
 	box.add_child(_spacer(8.0))
 
@@ -70,6 +89,25 @@ func _ready() -> void:
 	box.add_child(controls)
 
 
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_TRANSLATION_CHANGED and not _hero_buttons.is_empty():
+		_refresh_hero_buttons()
+
+
+func _select_hero(def_id: String) -> void:
+	Settings.hero = def_id
+	for id: String in _hero_buttons:
+		var button: Button = _hero_buttons[id]
+		button.button_pressed = id == def_id
+	_refresh_hero_buttons()
+
+
+func _refresh_hero_buttons() -> void:
+	for id: String in _hero_buttons:
+		var button: Button = _hero_buttons[id]
+		button.text = "%s\n%s" % [tr(button.get_meta("name_key")), tr(button.get_meta("role_key"))]
+
+
 ## Affiche un message d'état déjà traduit (vide pour l'effacer).
 func set_status(text: String) -> void:
 	_status.text = text
@@ -92,11 +130,11 @@ func _on_join() -> void:
 	var address := _address_edit.text.strip_edges()
 	if address.is_empty():
 		address = Settings.DEFAULT_ADDRESS
-	join_requested.emit(address, _player_name())
+	join_requested.emit(address, _player_name(), Settings.hero)
 
 
 func _on_training() -> void:
-	training_requested.emit(_player_name())
+	training_requested.emit(_player_name(), Settings.hero)
 
 
 func _label(text: String, font_size: int, color: Color) -> Label:

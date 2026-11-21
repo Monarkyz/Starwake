@@ -21,6 +21,7 @@ var _projectile_views: Dictionary = {}  # id -> MeshInstance3D
 var _structure_views: Array[StructureView] = []
 var _relic_orb: MeshInstance3D
 var _beams: Array = []  # [{node, left}]
+var _team_ranks: Array[int] = [0, 0]
 var _focus: Vector3 = Vector3.ZERO
 var _focus_ready: bool = false
 var _time: float = 0.0
@@ -32,6 +33,8 @@ var _unit_heights: Array[float] = []
 var _unit_materials: Array[StandardMaterial3D] = []
 var _beam_mesh: BoxMesh
 var _beam_materials: Array[StandardMaterial3D] = []
+var _disc_mesh: CylinderMesh
+var _disc_materials: Dictionary = {}  # type d'effet -> matériau
 
 
 func setup(p_client: GameClient) -> void:
@@ -67,6 +70,10 @@ func _process(delta: float) -> void:
 	_time += delta
 	var heroes := client.get_render_heroes()
 	var units := client.get_render_units()
+	var snap := client.latest_snapshot()
+	if snap != null:
+		for team in 2:
+			_team_ranks[team] = SimConst.armor_rank(snap.team_level[team])
 	_sync_heroes(heroes, delta)
 	_sync_units(units)
 	_sync_projectiles(client.get_render_projectiles())
@@ -74,7 +81,6 @@ func _process(delta: float) -> void:
 	hud.heroes = heroes
 	hud.units = units
 
-	var snap := client.latest_snapshot()
 	if snap != null:
 		for i in mini(snap.structures.size(), _structure_views.size()):
 			_structure_views[i].apply(snap.structures[i])
@@ -107,9 +113,9 @@ func _sync_heroes(heroes: Array[SimHero], delta: float) -> void:
 		if view == null:
 			view = HeroView.new()
 			add_child(view)
-			view.setup(h.team, h.id == client.my_hero_id)
+			view.setup(h.team, h.id == client.my_hero_id, h.def_id)
 			_hero_views[h.id] = view
-		view.apply(h, delta)
+		view.apply(h, delta, _team_ranks[h.team])
 	for id: int in _hero_views.keys():
 		if not seen.has(id):
 			_hero_views[id].queue_free()
@@ -158,11 +164,14 @@ func _sync_projectiles(projectiles: Array[SimProjectile]) -> void:
 ## Traits brefs pour les attaques instantanées : tirs des temples, des archers, onde de la relique.
 func _sync_beams(delta: float) -> void:
 	for beam: Array in client.take_beams():
-		var kind: int = clampi(beam[0], 0, BEAM_LIFE.size() - 1)
 		var from: Vector2 = beam[1]
 		var to: Vector2 = beam[2]
 		if from.distance_to(to) < 0.1:
 			continue
+		if beam[0] >= SimWorld.FX_SLASH:
+			_spawn_disc(beam[0], from, to)
+			continue
+		var kind: int = clampi(beam[0], 0, BEAM_LIFE.size() - 1)
 		var start := Vector3(from.x, 2.2 if kind != SimWorld.BEAM_ARCHER else 0.9, from.y)
 		var end := Vector3(to.x, 0.9, to.y)
 		var node := MeshInstance3D.new()
@@ -181,6 +190,28 @@ func _sync_beams(delta: float) -> void:
 		else:
 			entry["node"].queue_free()
 	_beams = kept
+
+
+## Effet de zone bref, sous forme de disque au sol : coup au corps à corps, onde, soin.
+func _spawn_disc(kind: int, from: Vector2, to: Vector2) -> void:
+	var center := from
+	var radius := from.distance_to(to)
+	var life := 0.35
+	if kind == SimWorld.FX_SLASH:
+		# Le coup porte devant le héros : un disque à mi-chemin de sa portée.
+		center = (from + to) * 0.5
+		radius *= 0.55
+		life = 0.16
+	elif kind == SimWorld.FX_HEAL:
+		life = 0.5
+	var node := MeshInstance3D.new()
+	node.mesh = _disc_mesh
+	node.material_override = _disc_materials.get(kind, _disc_materials[SimWorld.FX_RING])
+	node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	node.position = Vector3(center.x, 0.08, center.y)
+	node.scale = Vector3(radius, 1.0, radius)
+	add_child(node)
+	_beams.append({"node": node, "left": life})
 
 
 # ---------------------------------------------------------------------------
@@ -338,6 +369,18 @@ func _build_shared_resources() -> void:
 	_unit_heights = [0.85, 1.05, 1.6]
 	for color: Color in [Palette.TEAM_COLORS[0], Palette.TEAM_COLORS[1], NEUTRAL_COLOR]:
 		_unit_materials.append(_flat(color.darkened(0.15)))
+
+	_disc_mesh = CylinderMesh.new()
+	_disc_mesh.top_radius = 1.0
+	_disc_mesh.bottom_radius = 1.0
+	_disc_mesh.height = 0.05
+	_disc_mesh.radial_segments = 32
+	for entry: Array in [[SimWorld.FX_SLASH, Color(1.0, 0.95, 0.8, 0.45)], [SimWorld.FX_RING, Color(1.0, 0.85, 0.5, 0.4)], [SimWorld.FX_HEAL, Color(0.55, 1.0, 0.7, 0.4)]]:
+		var disc_material := StandardMaterial3D.new()
+		disc_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		disc_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		disc_material.albedo_color = entry[1]
+		_disc_materials[entry[0]] = disc_material
 
 	_beam_mesh = BoxMesh.new()
 	_beam_mesh.size = Vector3.ONE

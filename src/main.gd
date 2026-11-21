@@ -5,6 +5,8 @@ extends Node
 ##   --server                 serveur dédié (à lancer avec --headless)
 ##   --port=24565             port d'écoute du serveur
 ##   --bots=3                 nombre de bots ajoutés par le serveur
+##   --fill                   le serveur garde six héros en jeu : des bots tiennent les places libres
+##   --hero=sagitta           héros du joueur (sagitta, scutum ou columba)
 ##   --connect=hôte[:port]    rejoindre ce serveur sans passer par le menu
 ##   --training               lancer l'entraînement local sans passer par le menu
 ##   --name=Nom               nom du joueur
@@ -17,7 +19,6 @@ extends Node
 ##   --quit-on-match-end      quitter dès que la partie se termine (tests)
 
 const DEFAULT_PORT := 24565
-const TRAINING_BOTS := 5
 
 var _opts: Dictionary = {}
 var _server: GameServer
@@ -49,9 +50,9 @@ func _ready() -> void:
 	if _opts.has("server"):
 		_run_dedicated_server()
 	elif _opts.has("connect"):
-		_join(str(_opts["connect"]), str(_opts.get("name", "Player")))
+		_join(str(_opts["connect"]), str(_opts.get("name", "Player")), str(_opts.get("hero", HeroDefs.DEFAULT_HERO)))
 	elif _opts.has("training"):
-		_start_training(str(_opts.get("name", "Player")))
+		_start_training(str(_opts.get("name", "Player")), str(_opts.get("hero", HeroDefs.DEFAULT_HERO)))
 	else:
 		_show_menu()
 
@@ -67,21 +68,27 @@ func _process(_delta: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("leave_game") and _client != null and _menu != null:
+	if _client == null:
+		return
+	if event.is_action_pressed("leave_game") and _menu != null:
 		_leave_game("")
+	elif event.is_action_pressed("talent_1"):
+		_client.choose_talent(1)
+	elif event.is_action_pressed("talent_2"):
+		_client.choose_talent(2)
 
 
 func _run_dedicated_server() -> void:
 	var port := int(_opts.get("port", DEFAULT_PORT))
 	_server = _make_server()
 	_server.exit_after_events = int(_opts.get("exit-after-events", 0))
-	var err := _server.start(port, int(_opts.get("bots", 0)))
+	var err := _server.start(port, int(_opts.get("bots", 0)), _opts.has("fill"))
 	if err != OK:
 		printerr("[server] cannot listen on port %d (%s)" % [port, error_string(err)])
 		get_tree().quit(1)
 		return
-	print("[server] Starwake %s listening port=%d bots=%d" % [
-		ProjectSettings.get_setting("application/config/version"), port, int(_opts.get("bots", 0)),
+	print("[server] Starwake %s listening port=%d bots=%d fill=%s" % [
+		ProjectSettings.get_setting("application/config/version"), port, int(_opts.get("bots", 0)), _opts.has("fill"),
 	])
 
 
@@ -93,20 +100,20 @@ func _show_menu() -> void:
 
 
 ## Entraînement local : un serveur dans ce même processus, rempli de bots.
-func _start_training(player_name: String) -> void:
+func _start_training(player_name: String, hero: String) -> void:
 	_server = _make_server()
 	var port := 0
 	for candidate in range(DEFAULT_PORT + 1, DEFAULT_PORT + 11):
-		if _server.start(candidate, TRAINING_BOTS) == OK:
+		if _server.start(candidate, 0, true) == OK:
 			port = candidate
 			break
 	if port == 0:
 		_leave_game(tr("STATUS_SERVER_ERROR"))
 		return
-	_join("127.0.0.1:%d" % port, player_name)
+	_join("127.0.0.1:%d" % port, player_name, hero)
 
 
-func _join(address: String, player_name: String) -> void:
+func _join(address: String, player_name: String, hero: String) -> void:
 	var host := address
 	var port := DEFAULT_PORT
 	var colon := address.rfind(":")
@@ -123,7 +130,7 @@ func _join(address: String, player_name: String) -> void:
 	if _menu != null:
 		_menu.set_busy(true)
 		_menu.set_status(tr("STATUS_CONNECTING") % address)
-	_client.connect_to(host, port, player_name)
+	_client.connect_to(host, port, player_name, hero)
 
 
 func _on_client_state(state: GameClient.State) -> void:

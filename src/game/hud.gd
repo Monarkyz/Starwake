@@ -5,7 +5,9 @@ extends Control
 
 const SLOT_SIZE := Vector2(112.0, 78.0)
 const SLOT_GAP := 12.0
-const KEY_HINTS: Array[String] = ["KEY_ATTACK", "KEY_ABILITY_1", "KEY_ABILITY_2"]
+const KEY_HINTS: Array[String] = ["KEY_ATTACK", "KEY_ABILITY_1", "KEY_ABILITY_2", "KEY_AWAKEN"]
+const RANK_KEYS: Array[String] = ["RANK_BRONZE", "RANK_SILVER", "RANK_GOLD"]
+const ETHER_COLOR := Color("7fe3ff")
 const FEED_DURATION := 7.0
 const MINIMAP_WIDTH := 250.0
 const NEUTRAL := Color("8fd6cb")
@@ -48,8 +50,12 @@ func _draw() -> void:
 	_draw_ability_bar(me)
 	if snap.match_over:
 		_draw_match_end(snap, me)
-	elif not me.alive:
+		return
+	_draw_talent_choice(me)
+	if not me.alive:
 		_text_centered(size.y * 0.4, tr("HUD_RESPAWN_IN") % ceili(me.respawn_left), 28, Palette.TEXT)
+	elif me.stun_ticks > 0:
+		_text_centered(size.y * 0.4, tr("HUD_STUNNED"), 28, Palette.GOLD)
 	elif me.channeling:
 		_draw_channel(snap.relic_progress[me.team], Palette.TEAM_COLORS[me.team])
 
@@ -86,6 +92,9 @@ func _draw_overhead_bars(snap: SimSnapshot) -> void:
 			continue
 		var bar := Rect2(at - Vector2(34.0, 4.0), Vector2(68.0, 8.0))
 		_bar(bar, h.hp / maxf(h.max_hp, 1.0), Palette.TEAM_COLORS[h.team])
+		if h.shield > 0.0:
+			# Le bouclier s'ajoute par-dessus la vie, en clair.
+			draw_rect(Rect2(bar.position, Vector2(bar.size.x * clampf(h.shield / maxf(h.max_hp, 1.0), 0.0, 1.0), 3.0)), Color(0.85, 0.95, 1.0))
 		draw_string(_font, Vector2(at.x - 80.0, bar.position.y - 6.0), client.hero_name(h.id),
 				HORIZONTAL_ALIGNMENT_CENTER, 160.0, 13, Palette.TEXT)
 
@@ -106,18 +115,19 @@ func _on_screen(world_pos: Vector3) -> Vector2:
 
 func _draw_top_bar(snap: SimSnapshot) -> void:
 	var mid := size.x * 0.5
-	draw_rect(Rect2(mid - 270.0, 8.0, 540.0, 74.0), Palette.PANEL)
+	draw_rect(Rect2(mid - 330.0, 8.0, 660.0, 74.0), Palette.PANEL)
 	for team in 2:
 		var color: Color = Palette.TEAM_COLORS[team]
-		var left := mid - 258.0 if team == 0 else mid + 68.0
+		var left := mid - 318.0 if team == 0 else mid + 68.0
 		var alignment := HORIZONTAL_ALIGNMENT_LEFT if team == 0 else HORIZONTAL_ALIGNMENT_RIGHT
-		draw_string(_font, Vector2(left, 30.0), "%s · %s" % [tr(Palette.TEAM_KEYS[team]), tr("HUD_LEVEL") % snap.team_level[team]],
-				alignment, 190.0, 16, color)
+		var rank := tr(RANK_KEYS[SimConst.armor_rank(snap.team_level[team])])
+		draw_string(_font, Vector2(left, 30.0), "%s · %s · %s" % [tr(Palette.TEAM_KEYS[team]), tr("HUD_LEVEL") % snap.team_level[team], rank],
+				alignment, 250.0, 16, color)
 		# Expérience accumulée dans le niveau en cours.
 		var ratio := 1.0
 		if snap.team_level[team] < SimConst.MAX_LEVEL:
 			ratio = snap.team_xp[team] / SimConst.xp_needed(snap.team_level[team])
-		_bar(Rect2(left, 38.0, 190.0, 5.0), ratio, color.lightened(0.3))
+		_bar(Rect2(left, 38.0, 250.0, 5.0), ratio, color.lightened(0.3))
 	draw_string(_font, Vector2(mid - 60.0, 37.0), "%d  –  %d" % [snap.team_kills[0], snap.team_kills[1]],
 			HORIZONTAL_ALIGNMENT_CENTER, 120.0, 22, Palette.TEXT)
 
@@ -162,6 +172,10 @@ func _draw_ability_bar(me: SimHero) -> void:
 			HORIZONTAL_ALIGNMENT_CENTER, hp_bar.size.x, 13, Color(0.0, 0.0, 0.0, 0.85))
 	draw_string(_font, Vector2(hp_bar.position.x, hp_bar.position.y + 14.0), hp_text,
 			HORIZONTAL_ALIGNMENT_CENTER, hp_bar.size.x, 13, Color.WHITE)
+	if me.shield > 0.0:
+		draw_rect(Rect2(hp_bar.position, Vector2(hp_bar.size.x * clampf(me.shield / maxf(me.max_hp, 1.0), 0.0, 1.0), 4.0)), Color(0.85, 0.95, 1.0))
+	# Jauge d'éther, juste sous la vie.
+	_bar(Rect2(left, top - 8.0, total, 5.0), me.ether / SimConst.ETHER_MAX, ETHER_COLOR)
 
 	for slot in count:
 		var ability: Dictionary = abilities[slot]
@@ -172,14 +186,60 @@ func _draw_ability_bar(me: SimHero) -> void:
 				HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, 15, Palette.GOLD)
 		draw_string(_font, Vector2(rect.position.x + 4.0, rect.end.y - 12.0), tr(ability["name_key"]),
 				HORIZONTAL_ALIGNMENT_CENTER, rect.size.x - 8.0, 13, Palette.TEXT)
+		if ability.get("awakening", false):
+			_draw_awaken_slot(me, rect)
+			continue
 		var left_time: float = me.cooldowns[slot]
-		var full_time: float = ability["cooldown"]
+		var full_time := HeroDefs.value(me, slot, "cooldown")
 		# Les recharges très courtes (attaque de base) ne sont pas affichées.
 		if left_time > 0.0 and full_time >= 1.0:
 			var covered := rect.size.y * clampf(left_time / full_time, 0.0, 1.0)
 			draw_rect(Rect2(rect.position.x, rect.end.y - covered, rect.size.x, covered), Color(0.0, 0.0, 0.0, 0.6))
 			draw_string(_font, Vector2(rect.position.x, rect.position.y + 50.0), "%.1f" % left_time,
 					HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, 22, Palette.TEXT)
+
+
+## Créneau de l'éveil : il se remplit avec l'éther, puis affiche le temps d'éveil restant.
+func _draw_awaken_slot(me: SimHero, rect: Rect2) -> void:
+	if me.is_awakened():
+		draw_rect(rect, Color(ETHER_COLOR, 0.25))
+		draw_rect(rect, ETHER_COLOR, false, 2.5)
+		draw_string(_font, Vector2(rect.position.x, rect.position.y + 50.0), "%.1f" % (me.awaken_ticks * SimConst.DT),
+				HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, 22, Color.WHITE)
+		return
+	var ratio := clampf(me.ether / SimConst.ETHER_MAX, 0.0, 1.0)
+	if ratio >= 1.0:
+		draw_rect(rect, ETHER_COLOR, false, 2.5)
+		draw_string(_font, Vector2(rect.position.x, rect.position.y + 48.0), tr("HUD_READY"),
+				HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, 16, ETHER_COLOR)
+		return
+	var empty := rect.size.y * (1.0 - ratio)
+	draw_rect(Rect2(rect.position, Vector2(rect.size.x, empty)), Color(0.0, 0.0, 0.0, 0.6))
+	draw_string(_font, Vector2(rect.position.x, rect.position.y + 50.0), "%d %%" % int(ratio * 100.0),
+			HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, 18, Palette.TEXT)
+
+
+## Choix de talent : deux propositions, à prendre avec les touches 1 et 2.
+func _draw_talent_choice(me: SimHero) -> void:
+	var tier := client.pending_talent_tier()
+	if tier < 0:
+		return
+	var options: Array = HeroDefs.get_def(me.def_id)["talents"][tier]
+	var box := Vector2(330.0, 92.0)
+	var gap := 14.0
+	var left := (size.x - box.x * 2.0 - gap) * 0.5
+	var top := size.y - SLOT_SIZE.y - 22.0 - 44.0 - box.y - 26.0
+	draw_rect(Rect2(left, top - 30.0, box.x * 2.0 + gap, 26.0), Palette.PANEL)
+	_text_centered(top - 11.0, tr("HUD_TALENT_TITLE") % SimConst.TALENT_LEVELS[tier], 16, Palette.GOLD)
+	for i in 2:
+		var option: Dictionary = options[i]
+		var rect := Rect2(Vector2(left + i * (box.x + gap), top), box)
+		draw_rect(rect, Palette.PANEL)
+		draw_rect(rect, Palette.GOLD, false, 1.5)
+		draw_string(_font, rect.position + Vector2(12.0, 26.0), "[%d]  %s" % [i + 1, tr(option["name_key"])],
+				HORIZONTAL_ALIGNMENT_LEFT, box.x - 24.0, 16, Palette.GOLD)
+		draw_multiline_string(_font, rect.position + Vector2(12.0, 50.0), tr(option["desc_key"]),
+				HORIZONTAL_ALIGNMENT_LEFT, box.x - 24.0, 13, 2, Palette.TEXT)
 
 
 func _draw_channel(progress: float, color: Color) -> void:
@@ -259,6 +319,11 @@ func _on_game_event(type: String, a: int, b: int) -> void:
 		"level":
 			if client.local != null and a == client.local.team:
 				_push_feed(tr("FEED_LEVEL") % b)
+				var rank := SimConst.armor_rank(b)
+				if rank != SimConst.armor_rank(b - 1):
+					_push_feed(tr("FEED_RANK") % tr(RANK_KEYS[rank]))
+		"awaken":
+			_push_feed(tr("FEED_AWAKEN") % client.hero_name(a))
 
 
 func _push_feed(text: String) -> void:

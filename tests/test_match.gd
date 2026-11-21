@@ -17,14 +17,17 @@ func _init() -> void:
 func _play(seed_value: int) -> int:
 	var world := SimWorld.new()
 	var brains: Dictionary = {}
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed_value
 	for i in SimConst.MAX_PLAYERS:
-		var hero := world.add_hero(i % 2)
+		# Chaque équipe aligne un tank, un assassin et un soutien, comme le fait le serveur.
+		var hero := world.add_hero(i % 2, GameServer.BOT_HEROES[i / 2])
 		var brain := BotBrain.new(seed_value * 100 + i)
 		brain.lane = hero.spawn_slot % 2
 		brain.roamer = hero.spawn_slot >= 2
 		brains[hero.id] = brain
 
-	var counts: Dictionary = {"kill": 0, "structure": 0, "relic": 0, "camp": 0}
+	var counts: Dictionary = {"kill": 0, "structure": 0, "relic": 0, "camp": 0, "awaken": 0}
 	var max_units := 0
 	var max_bytes := 0
 	var slowest_usec := 0
@@ -38,6 +41,12 @@ func _play(seed_value: int) -> int:
 		var before := Time.get_ticks_usec()
 		world.step(inputs)
 		slowest_usec = maxi(slowest_usec, Time.get_ticks_usec() - before)
+		if world.tick % SimConst.TICK_RATE == 0:
+			for id: int in world.heroes:
+				var hero: SimHero = world.heroes[id]
+				var tier := HeroDefs.pending_talent_tier(hero, world.team_level[hero.team])
+				if tier >= 0:
+					world.choose_talent(id, tier, rng.randi_range(1, 2))
 		for ev: Array in world.events:
 			if counts.has(ev[0]):
 				counts[ev[0]] += 1
@@ -58,6 +67,14 @@ func _play(seed_value: int) -> int:
 	failures += _check(counts["structure"] >= 3, "at least two temples and a sanctuary fall")
 	failures += _check(counts["kill"] >= 1, "heroes get eliminated")
 	failures += _check(counts["relic"] >= 1, "the relic gets captured")
+	failures += _check(counts["awaken"] >= 3, "heroes awaken during the match (%d)" % counts["awaken"])
+	var talents := 0
+	for id: int in world.heroes:
+		var hero: SimHero = world.heroes[id]
+		for choice in hero.talents:
+			if choice > 0:
+				talents += 1
+	failures += _check(talents >= 6, "heroes pick talents as the team levels up (%d)" % talents)
 	failures += _check(max_bytes <= 1300, "the world state always fits in one packet (%d bytes)" % max_bytes)
 	# Un pas dure 33 ms en temps réel : la simulation doit en prendre une petite fraction.
 	failures += _check(per_tick_ms < 8.0, "the simulation is fast enough (%.2f ms per step)" % per_tick_ms)

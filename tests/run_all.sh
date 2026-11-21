@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Lance tous les tests : règles du jeu, partie complète entre bots en accéléré, puis partie
 # réelle en réseau à 3 contre 3 entre un serveur, ses bots et deux clients.
+# (Les deux joueurs choisissent des héros différents et remplacent chacun un bot.)
 # Usage : tests/run_all.sh        (variable GODOT pour choisir l'exécutable, "godot" par défaut)
 set -u
 
@@ -29,13 +30,13 @@ if grep -Eq "SCRIPT ERROR|Parse Error|FAIL:" "$LOGS/match.log"; then
 	status=1
 fi
 
-echo "== Partie en réseau : un serveur avec quatre bots, deux clients en pilote automatique =="
-"$GODOT" --headless --path . -- --server --port="$PORT" --bots=4 --exit-after-events=1 --quit-after=250 >"$LOGS/server.log" 2>&1 &
+echo "== Partie en réseau : un serveur complété par des bots, deux clients en pilote automatique =="
+"$GODOT" --headless --path . -- --server --port="$PORT" --fill --exit-after-events=1 --quit-after=250 >"$LOGS/server.log" 2>&1 &
 server_pid=$!
 sleep 2
-"$GODOT" --headless --path . -- --connect=127.0.0.1:"$PORT" --name=Alpha --autopilot --quit-after=240 >"$LOGS/alpha.log" 2>&1 &
+"$GODOT" --headless --path . -- --connect=127.0.0.1:"$PORT" --name=Alpha --hero=scutum --autopilot --quit-after=240 >"$LOGS/alpha.log" 2>&1 &
 alpha_pid=$!
-"$GODOT" --headless --path . -- --connect=127.0.0.1:"$PORT" --name=Beta --autopilot --quit-after=240 >"$LOGS/beta.log" 2>&1 &
+"$GODOT" --headless --path . -- --connect=127.0.0.1:"$PORT" --name=Beta --hero=columba --autopilot --quit-after=240 >"$LOGS/beta.log" 2>&1 &
 beta_pid=$!
 
 wait "$alpha_pid"; alpha_code=$?
@@ -53,8 +54,12 @@ done
 # accueil par le serveur, états reçus, sbires vus, écart de prédiction.
 [ "$server_code" -eq 0 ] || { echo "ÉCHEC : le serveur n'a enregistré aucun événement de jeu (code $server_code)"; status=1; }
 grep -Eq "kill killer=|relic captured|camp captured|structure destroyed" "$LOGS/server.log" || { echo "ÉCHEC : aucun événement de jeu dans le journal du serveur"; status=1; }
-grep -q "join name=Alpha" "$LOGS/server.log" || { echo "ÉCHEC : Alpha n'a pas rejoint"; status=1; }
-grep -q "join name=Beta" "$LOGS/server.log" || { echo "ÉCHEC : Beta n'a pas rejoint"; status=1; }
+# Chaque joueur remplace un bot : il joue le héros demandé et la partie reste à six héros.
+grep -q "join name=Alpha team=[01] hero=scutum heroes=6" "$LOGS/server.log" || { echo "ÉCHEC : Alpha n'a pas remplacé un bot avec son héros"; status=1; }
+grep -q "join name=Beta team=[01] hero=columba heroes=6" "$LOGS/server.log" || { echo "ÉCHEC : Beta n'a pas remplacé un bot avec son héros"; status=1; }
+alpha_team="$(sed -n 's/.*join name=Alpha team=\([01]\).*/\1/p' "$LOGS/server.log")"
+beta_team="$(sed -n 's/.*join name=Beta team=\([01]\).*/\1/p' "$LOGS/server.log")"
+[ "$alpha_team" != "$beta_team" ] || { echo "ÉCHEC : les deux joueurs sont dans la même équipe"; status=1; }
 grep -q "joined hero_id=" "$LOGS/alpha.log" || { echo "ÉCHEC : Alpha n'a pas été accueilli"; status=1; }
 grep -q "joined hero_id=" "$LOGS/beta.log" || { echo "ÉCHEC : Beta n'a pas été accueilli"; status=1; }
 for name in alpha beta; do

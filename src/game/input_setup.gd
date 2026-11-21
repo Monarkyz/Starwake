@@ -15,6 +15,11 @@ static func ensure_actions() -> void:
 	_mouse("attack", MOUSE_BUTTON_LEFT)
 	_mouse("ability_1", MOUSE_BUTTON_RIGHT)
 	_key("ability_2", KEY_SPACE)
+	_key("awaken", KEY_R)
+	_key("talent_1", KEY_1)
+	_key("talent_1", KEY_KP_1)
+	_key("talent_2", KEY_2)
+	_key("talent_2", KEY_KP_2)
 	_key("leave_game", KEY_ESCAPE)
 
 

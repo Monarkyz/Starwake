@@ -2,6 +2,8 @@ class_name BotBrain
 extends RefCounted
 ## Cerveau de bot. Par ordre de priorité : se replier quand il est blessé, combattre
 ## le héros adverse le plus proche, canaliser la relique, pousser sa voie.
+## Il joue n'importe quel héros : la distance de combat et l'usage des capacités viennent
+## de la fiche du héros (preferred_range, et "ai" de chaque capacité).
 ## Sert côté serveur (bots d'entraînement) et côté client (pilote automatique des tests).
 ##
 ## "view" est un SimWorld (serveur) ou un SimSnapshot (client) : les deux exposent
@@ -50,10 +52,13 @@ func think(me: SimHero, view: Variant) -> SimInput:
 	if _retreating and not arena.fountains.is_empty():
 		cmd.move = (arena.fountains[me.team] - me.pos).limit_length(1.0)
 		if enemy_hero != null:
+			var gap := me.pos.distance_to(enemy_hero.pos)
 			cmd.aim = enemy_hero.pos
-			cmd.buttons |= SimConst.BTN_ATTACK
-			if me.pos.distance_to(enemy_hero.pos) < 6.0:
-				cmd.buttons |= SimConst.BTN_ABILITY_2
+			cmd.buttons |= _damage_buttons(me, gap, 0.0)
+			if gap < 6.0:
+				cmd.buttons |= _buttons_for(me, "escape")
+			cmd.buttons |= _buttons_for(me, "shield")
+		_heal_allies(me, view, cmd)
 		return _finish(me, cmd)
 
 	if enemy_hero != null:
@@ -61,25 +66,85 @@ func think(me: SimHero, view: Variant) -> SimInput:
 	elif not _go_for_relic(me, view, arena, cmd):
 		_push_lane(me, view, arena, cmd)
 	_avoid_structures(me, view, cmd)
+	_heal_allies(me, view, cmd)
 	return _finish(me, cmd)
 
 
 func _fight_hero(me: SimHero, target: SimHero, cmd: SimInput) -> void:
+	var preferred: float = HeroDefs.get_def(me.def_id)["preferred_range"]
+	var target_radius: float = HeroDefs.get_def(target.def_id)["radius"]
 	var to_target := target.pos - me.pos
 	var dist := to_target.length()
 	var dir := to_target / maxf(dist, 0.001)
 	var side := Vector2(-dir.y, dir.x) * _strafe
-	if dist > 8.5:
+	if dist > preferred + 1.0:
 		cmd.move = (dir + side * 0.35).normalized()
-	elif dist < 5.0:
+	elif dist < preferred - 2.5:
 		cmd.move = (-dir + side * 0.6).normalized()
-	else:
+	elif preferred > 4.0:
 		cmd.move = side
-	cmd.aim = target.pos + _aim_error
-	if dist < 9.5:
-		cmd.buttons |= SimConst.BTN_ATTACK
-	if dist < 15.0:
-		cmd.buttons |= SimConst.BTN_ABILITY_1
+	cmd.aim = target.pos + _aim_error * (1.0 if preferred > 4.0 else 0.2)
+	cmd.buttons |= _damage_buttons(me, dist, target_radius)
+	if me.hp < me.max_hp * 0.7:
+		cmd.buttons |= _buttons_for(me, "shield")
+	if me.ether >= SimConst.ETHER_MAX and dist < 9.0:
+		cmd.buttons |= SimConst.BTN_AWAKEN
+
+
+## Boutons des capacités offensives dont la portée atteint une cible à cette distance.
+func _damage_buttons(me: SimHero, dist: float, target_radius: float) -> int:
+	var buttons := 0
+	var abilities: Array = HeroDefs.get_def(me.def_id)["abilities"]
+	for slot in abilities.size():
+		var ability: Dictionary = abilities[slot]
+		if ability.get("ai", "") == "damage" and dist - target_radius <= HeroDefs.value(me, slot, "range"):
+			buttons |= 1 << slot
+	return buttons
+
+
+## Boutons des capacités ayant le rôle donné (voir "ai" dans HeroDefs).
+func _buttons_for(me: SimHero, role: String) -> int:
+	var buttons := 0
+	var abilities: Array = HeroDefs.get_def(me.def_id)["abilities"]
+	for slot in abilities.size():
+		var ability: Dictionary = abilities[slot]
+		if ability.get("ai", "") == role:
+			buttons |= 1 << slot
+	return buttons
+
+
+## Portée la plus longue parmi les capacités offensives : distance de tir sur les bâtiments.
+func _reach(me: SimHero) -> float:
+	var reach := 0.0
+	var abilities: Array = HeroDefs.get_def(me.def_id)["abilities"]
+	for slot in abilities.size():
+		var ability: Dictionary = abilities[slot]
+		if ability.get("ai", "") == "damage" and not ability.get("awakening", false):
+			reach = maxf(reach, minf(HeroDefs.value(me, slot, "range"), 9.5))
+	return reach
+
+
+## Soigneur : viser l'allié le plus blessé à portée et lancer le soin.
+func _heal_allies(me: SimHero, view: Variant, cmd: SimInput) -> void:
+	var abilities: Array = HeroDefs.get_def(me.def_id)["abilities"]
+	for slot in abilities.size():
+		var ability: Dictionary = abilities[slot]
+		if ability.get("ai", "") != "heal" or me.cooldowns[slot] > 0.0:
+			continue
+		var reach := HeroDefs.value(me, slot, "range") + HeroDefs.value(me, slot, "radius") * 0.5
+		var worst: SimHero = null
+		var worst_ratio := 0.7
+		for id: int in view.heroes:
+			var ally: SimHero = view.heroes[id]
+			if ally.team != me.team or not ally.alive or ally.pos.distance_to(me.pos) > reach:
+				continue
+			var ratio := ally.hp / maxf(ally.max_hp, 1.0)
+			if ratio < worst_ratio:
+				worst_ratio = ratio
+				worst = ally
+		if worst != null:
+			cmd.aim = worst.pos
+			cmd.buttons |= 1 << slot
 
 
 ## Va sur l'autel et y reste immobile pour canaliser. Renvoie faux si ce n'est pas le moment.
@@ -98,8 +163,10 @@ func _go_for_relic(me: SimHero, view: Variant, arena: SimArena, cmd: SimInput) -
 
 
 func _push_lane(me: SimHero, view: Variant, arena: SimArena, cmd: SimInput) -> void:
-	# Sbires et mercenaires adverses à portée.
+	# Sbires et mercenaires adverses à portée de vue.
 	var enemy := 1 - me.team
+	var preferred: float = HeroDefs.get_def(me.def_id)["preferred_range"]
+	var reach := _reach(me)
 	var target_pos := Vector2.ZERO
 	var best := 9.5 * 9.5
 	var found := false
@@ -112,25 +179,29 @@ func _push_lane(me: SimHero, view: Variant, arena: SimArena, cmd: SimInput) -> v
 			target_pos = u.pos
 			found = true
 	if found:
-		cmd.aim = target_pos + _aim_error * 0.3
-		cmd.buttons |= SimConst.BTN_ATTACK | SimConst.BTN_ABILITY_1
-		if best < 16.0:
+		var dist := sqrt(best)
+		cmd.aim = target_pos + _aim_error * (0.3 if preferred > 4.0 else 0.0)
+		cmd.buttons |= _damage_buttons(me, dist, 0.45)
+		if dist > maxf(preferred, 1.2) + 0.8:
+			if preferred < 4.0:
+				cmd.move = (target_pos - me.pos).normalized()
+		elif preferred > 4.0 and dist < 4.0:
 			# Garder ses distances, en reculant vers sa propre base.
 			var back := -1.0 if me.team == SimConst.TEAM_DAWN else 1.0
 			cmd.move = ((me.pos - target_pos).normalized() + Vector2(back, 0.0)).normalized()
 		return
 
-	# Bâtiment adverse attaquable à portée de tir.
+	# Bâtiment adverse attaquable à portée.
 	for s: SimStructure in view.structures:
 		if s.team != enemy or not s.alive or not s.vulnerable:
 			continue
 		var edge := s.pos.distance_to(me.pos) - s.radius
-		if edge < 9.0:
+		if edge < reach - 0.5:
 			cmd.aim = s.pos
-			cmd.buttons |= SimConst.BTN_ATTACK | SimConst.BTN_ABILITY_1
+			cmd.buttons |= _damage_buttons(me, edge + s.radius, s.radius)
 			return
 		if edge < 14.0:
-			# À portée de vue : s'approcher jusqu'à pouvoir tirer (le repli est géré plus bas).
+			# À portée de vue : s'approcher jusqu'à pouvoir frapper (le repli est géré plus bas).
 			cmd.move = (s.pos - me.pos).normalized()
 			return
 

@@ -34,6 +34,7 @@ var stats: Dictionary = {"snapshots": 0, "corrections": 0, "max_correction": 0.0
 var _peer: ENetMultiplayerPeer
 var _mp_path: NodePath
 var _player_name: String = ""
+var _hero_def: String = HeroDefs.DEFAULT_HERO
 var _connect_elapsed: float = 0.0
 var _seq: int = 0
 var _pending: Array[SimInput] = []
@@ -74,8 +75,9 @@ func _ready() -> void:
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
 
 
-func connect_to(address: String, port: int, player_name: String) -> Error:
+func connect_to(address: String, port: int, player_name: String, hero_def: String = HeroDefs.DEFAULT_HERO) -> Error:
 	_player_name = player_name
+	_hero_def = hero_def
 	_peer = ENetMultiplayerPeer.new()
 	var err := _peer.create_client(address, port)
 	if err != OK:
@@ -90,6 +92,20 @@ func connect_to(address: String, port: int, player_name: String) -> Error:
 
 func latest_snapshot() -> SimSnapshot:
 	return _snaps.back() if not _snaps.is_empty() else null
+
+
+## Palier de talents en attente de choix pour le héros du joueur, ou -1.
+func pending_talent_tier() -> int:
+	var snap := latest_snapshot()
+	if snap == null or local == null or snap.match_over:
+		return -1
+	return HeroDefs.pending_talent_tier(local, snap.team_level[local.team])
+
+
+func choose_talent(choice: int) -> void:
+	var tier := pending_talent_tier()
+	if tier >= 0 and state == State.PLAYING:
+		net.c2s_talent.rpc_id(1, tier, choice)
 
 
 func hero_name(hero_id: int) -> String:
@@ -224,7 +240,7 @@ func _physics_process(_delta: float) -> void:
 
 func _on_connected() -> void:
 	_set_state(State.JOINING)
-	net.c2s_join.rpc_id(1, _player_name, SimConst.PROTOCOL_VERSION)
+	net.c2s_join.rpc_id(1, _player_name, SimConst.PROTOCOL_VERSION, _hero_def)
 
 
 func _on_server_disconnected() -> void:

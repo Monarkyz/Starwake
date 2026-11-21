@@ -16,6 +16,8 @@ func sample(client: GameClient) -> SimInput:
 		cmd.buttons |= SimConst.BTN_ABILITY_1
 	if Input.is_action_pressed("ability_2"):
 		cmd.buttons |= SimConst.BTN_ABILITY_2
+	if Input.is_action_pressed("awaken"):
+		cmd.buttons |= SimConst.BTN_AWAKEN
 	return cmd
 
 

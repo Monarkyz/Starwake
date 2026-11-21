@@ -7,7 +7,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 
 msgid "MENU_SUBTITLE"
-msgstr "Prototype — jalon 2 : le sanctuaire"
+msgstr "Prototype — jalon 3 : héros, talents et éveil"
 
 msgid "MENU_NAME_PLACEHOLDER"
 msgstr "Ton nom"
@@ -25,7 +25,7 @@ msgid "MENU_QUIT"
 msgstr "Quitter"
 
 msgid "MENU_CONTROLS"
-msgstr "ZQSD : se déplacer · Souris : viser · Clic gauche : attaquer · Clic droit : Trait sidéral · Espace : Pas de comète · Échap : menu"
+msgstr "ZQSD : se déplacer · Souris : viser · Clic gauche, clic droit, Espace : capacités · R : éveil quand la jauge d'éther est pleine · 1 ou 2 : choisir un talent · Échap : menu"
 
 msgid "DEFAULT_PLAYER_NAME"
 msgstr "Joueur"
@@ -131,3 +131,180 @@ msgstr "L'équipe %s recrute des mercenaires"
 
 msgid "FEED_LEVEL"
 msgstr "Ton équipe passe au niveau %d"
+
+msgid "ROLE_ASSASSIN"
+msgstr "Assassin"
+
+msgid "ROLE_TANK"
+msgstr "Tank"
+
+msgid "ROLE_SUPPORT"
+msgstr "Soutien"
+
+msgid "HERO_SCUTUM"
+msgstr "Brontès de l'Écu"
+
+msgid "HERO_COLUMBA"
+msgstr "Ismène de la Colombe"
+
+msgid "ABILITY_SAGITTA_ULT"
+msgstr "Pluie d'étoiles"
+
+msgid "ABILITY_SCUTUM_ATTACK"
+msgstr "Coup d'écu"
+
+msgid "ABILITY_SCUTUM_SHOCK"
+msgstr "Onde de choc"
+
+msgid "ABILITY_SCUTUM_WALL"
+msgstr "Rempart"
+
+msgid "ABILITY_SCUTUM_ULT"
+msgstr "Séisme"
+
+msgid "ABILITY_COLUMBA_ATTACK"
+msgstr "Plume d'argent"
+
+msgid "ABILITY_COLUMBA_HEAL"
+msgstr "Chant d'aube"
+
+msgid "ABILITY_COLUMBA_SNARE"
+msgstr "Entrave"
+
+msgid "ABILITY_COLUMBA_ULT"
+msgstr "Aube nouvelle"
+
+msgid "KEY_AWAKEN"
+msgstr "R"
+
+msgid "RANK_BRONZE"
+msgstr "Bronze"
+
+msgid "RANK_SILVER"
+msgstr "Argent"
+
+msgid "RANK_GOLD"
+msgstr "Or"
+
+msgid "HUD_READY"
+msgstr "Prêt"
+
+msgid "HUD_STUNNED"
+msgstr "Étourdi"
+
+msgid "HUD_TALENT_TITLE"
+msgstr "Niveau %d : choisis un talent avec la touche 1 ou 2"
+
+msgid "FEED_RANK"
+msgstr "L'armure de ton équipe passe au rang %s"
+
+msgid "FEED_AWAKEN"
+msgstr "%s s'éveille"
+
+msgid "TALENT_SAGITTA_1A"
+msgstr "Pointe acérée"
+
+msgid "TALENT_SAGITTA_1A_DESC"
+msgstr "Tir d'étoile inflige 20 % de dégâts en plus."
+
+msgid "TALENT_SAGITTA_1B"
+msgstr "Carquois léger"
+
+msgid "TALENT_SAGITTA_1B_DESC"
+msgstr "Trait sidéral se recharge 25 % plus vite."
+
+msgid "TALENT_SAGITTA_2A"
+msgstr "Longue vue"
+
+msgid "TALENT_SAGITTA_2A_DESC"
+msgstr "Trait sidéral porte 30 % plus loin."
+
+msgid "TALENT_SAGITTA_2B"
+msgstr "Foulée d'éther"
+
+msgid "TALENT_SAGITTA_2B_DESC"
+msgstr "Pas de comète se recharge 35 % plus vite."
+
+msgid "TALENT_SAGITTA_3A"
+msgstr "Constellation ardente"
+
+msgid "TALENT_SAGITTA_3A_DESC"
+msgstr "Trait sidéral inflige 40 % de dégâts en plus."
+
+msgid "TALENT_SAGITTA_3B"
+msgstr "Souffle stellaire"
+
+msgid "TALENT_SAGITTA_3B_DESC"
+msgstr "Théron se déplace 12 % plus vite."
+
+msgid "TALENT_SCUTUM_1A"
+msgstr "Cuir épais"
+
+msgid "TALENT_SCUTUM_1A_DESC"
+msgstr "Brontès gagne 15 % de vie maximale."
+
+msgid "TALENT_SCUTUM_1B"
+msgstr "Poigne de fer"
+
+msgid "TALENT_SCUTUM_1B_DESC"
+msgstr "Coup d'écu inflige 25 % de dégâts en plus."
+
+msgid "TALENT_SCUTUM_2A"
+msgstr "Rempart durable"
+
+msgid "TALENT_SCUTUM_2A_DESC"
+msgstr "Rempart absorbe 40 % de dégâts en plus."
+
+msgid "TALENT_SCUTUM_2B"
+msgstr "Onde longue"
+
+msgid "TALENT_SCUTUM_2B_DESC"
+msgstr "Onde de choc étourdit 50 % plus longtemps."
+
+msgid "TALENT_SCUTUM_3A"
+msgstr "Colosse"
+
+msgid "TALENT_SCUTUM_3A_DESC"
+msgstr "Brontès gagne 20 % de vie maximale."
+
+msgid "TALENT_SCUTUM_3B"
+msgstr "Rempart prompt"
+
+msgid "TALENT_SCUTUM_3B_DESC"
+msgstr "Rempart se recharge 30 % plus vite."
+
+msgid "TALENT_COLUMBA_1A"
+msgstr "Chant clair"
+
+msgid "TALENT_COLUMBA_1A_DESC"
+msgstr "Chant d'aube soigne 20 % de plus."
+
+msgid "TALENT_COLUMBA_1B"
+msgstr "Plume vive"
+
+msgid "TALENT_COLUMBA_1B_DESC"
+msgstr "Plume d'argent inflige 20 % de dégâts en plus."
+
+msgid "TALENT_COLUMBA_2A"
+msgstr "Large halo"
+
+msgid "TALENT_COLUMBA_2A_DESC"
+msgstr "La zone de Chant d'aube est 35 % plus large."
+
+msgid "TALENT_COLUMBA_2B"
+msgstr "Entrave tenace"
+
+msgid "TALENT_COLUMBA_2B_DESC"
+msgstr "Entrave ralentit 50 % plus longtemps."
+
+msgid "TALENT_COLUMBA_3A"
+msgstr "Source vive"
+
+msgid "TALENT_COLUMBA_3A_DESC"
+msgstr "Chant d'aube se recharge 25 % plus vite."
+
+msgid "TALENT_COLUMBA_3B"
+msgstr "Grâce"
+
+msgid "TALENT_COLUMBA_3B_DESC"
+msgstr "Ismène se déplace 12 % plus vite."

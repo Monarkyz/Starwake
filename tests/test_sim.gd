@@ -26,6 +26,12 @@ func _init() -> void:
 	_test_relic()
 	_test_camp()
 	_test_fountain_and_regen()
+	_test_tank_melee_and_stun()
+	_test_shield()
+	_test_support_heal_and_slow()
+	_test_talents()
+	_test_ether_and_awakening()
+	_test_armor_ranks()
 	_test_snapshot_roundtrip()
 	_test_snapshot_fits_in_a_packet()
 	_test_translations_complete()
@@ -50,12 +56,12 @@ func _input(move: Vector2, aim: Vector2, buttons: int = 0, seq: int = 0) -> SimI
 
 
 ## Monde vide (ni voie ni bâtiment), avec un héros par équipe placé aux positions données.
-func _duel(pos_a: Vector2, pos_b: Vector2) -> Array:
+func _duel(pos_a: Vector2, pos_b: Vector2, hero_a: String = "sagitta", hero_b: String = "sagitta") -> Array:
 	var arena := SimArena.new()
 	arena.spawns = [[pos_a], [pos_b]]
 	var world := SimWorld.new(arena)
-	var a := world.add_hero(SimConst.TEAM_DAWN)
-	var b := world.add_hero(SimConst.TEAM_DUSK)
+	var a := world.add_hero(SimConst.TEAM_DAWN, hero_a)
+	var b := world.add_hero(SimConst.TEAM_DUSK, hero_b)
 	return [world, a, b]
 
 
@@ -223,11 +229,23 @@ func _test_prediction_matches_server() -> void:
 			move = Vector2(rng.randf_range(-1.0, 1.0), rng.randf_range(-1.0, 1.0))
 		if i % 200 < 60:
 			move = (Vector2(-48.0, 0.0) - predicted.pos).normalized()  # Foncer vers son sanctuaire.
-		var cmd := _input(move, Vector2(rng.randf_range(-20.0, 20.0), rng.randf_range(-12.0, 12.0)),
-				SimConst.BTN_ABILITY_2 if rng.randf() < 0.05 else 0, i + 1)
+		var buttons := SimConst.BTN_ABILITY_2 if rng.randf() < 0.05 else 0
+		if i == 300:
+			# Le serveur étourdit puis ralentit le héros : le client l'apprend par la photographie.
+			a.stun_ticks = 20
+			a.slow_ticks = 90
+			a.slow_pct = 50
+			predicted = a.copy()
+		if i == 500:
+			a.ether = SimConst.ETHER_MAX
+			predicted = a.copy()
+			buttons |= SimConst.BTN_AWAKEN
+		var cmd := _input(move, Vector2(rng.randf_range(-20.0, 20.0), rng.randf_range(-12.0, 12.0)), buttons, i + 1)
 		SimWorld.step_hero_local(predicted, cmd, client_arena, SimConst.DT)
 		world.step({a.id: cmd})
 		worst = maxf(worst, predicted.pos.distance_to(a.pos))
+		if i == 500:
+			_check(a.is_awakened() and predicted.awaken_ticks == a.awaken_ticks, "awakening is predicted on the same step")
 	_check(worst < 0.0001, "client prediction matches the server (worst gap %s)" % worst)
 	_check(is_equal_approx(predicted.cooldowns[2], a.cooldowns[2]), "predicted dash cooldown matches the server")
 	_check(a.pos.distance_to(Vector2(-48.0, 0.0)) >= 3.6 - 0.001, "a standing sanctuary blocks heroes")
@@ -485,6 +503,215 @@ func _test_fountain_and_regen() -> void:
 
 
 # ---------------------------------------------------------------------------
+# Héros : rôles, talents, éther, rangs d'armures
+# ---------------------------------------------------------------------------
+
+func _test_tank_melee_and_stun() -> void:
+	var arena := SimArena.new()
+	arena.spawns = [[Vector2.ZERO], [Vector2(2.0, 0.0), Vector2(-2.0, 0.0), Vector2(9.0, 0.0)]]
+	var world := SimWorld.new(arena)
+	var tank := world.add_hero(SimConst.TEAM_DAWN, "scutum")
+	var front := world.add_hero(SimConst.TEAM_DUSK)
+	var behind := world.add_hero(SimConst.TEAM_DUSK)
+	var far := world.add_hero(SimConst.TEAM_DUSK)
+	_check(is_equal_approx(tank.max_hp, 1700.0), "the tank has its own max hp")
+	var minion := world._spawn_unit(UnitDefs.FOOTMAN, SimConst.TEAM_DUSK, Vector2(1.5, 1.0))
+	minion.attack_cd = 1000.0
+	world.step({tank.id: _input(Vector2.ZERO, front.pos, SimConst.BTN_ATTACK)})
+	_check(is_equal_approx(front.max_hp - front.hp, 110.0), "a melee hit damages the enemy in front")
+	_check(is_equal_approx(behind.hp, behind.max_hp) and is_equal_approx(far.hp, far.max_hp), "a melee hit misses enemies behind or out of reach")
+	_check(is_equal_approx(minion.max_hp - minion.hp, 110.0), "a melee hit also damages minions in its arc")
+	_check(world.beams.size() >= 1 and world.beams[0][0] == SimWorld.FX_SLASH, "a melee hit is reported for display")
+
+	# L'onde de choc étourdit : la victime ne bouge plus et n'agit plus pendant une seconde.
+	world.step({tank.id: _input(Vector2.ZERO, front.pos, SimConst.BTN_ABILITY_1)})
+	# La victime, mise à jour après le tank dans le même pas, a déjà écoulé un pas d'étourdissement.
+	_check(front.stun_ticks == 29, "the shockwave stuns for one second (%d steps left)" % front.stun_ticks)
+	var stuck := front.pos
+	var projectiles := world.projectiles.size()
+	_steps(world, 0.9, {front.id: _input(Vector2.UP, tank.pos, SimConst.BTN_ATTACK)})
+	_check(front.pos == stuck and world.projectiles.size() == projectiles, "a stunned hero neither moves nor attacks")
+	_steps(world, 0.5, {front.id: _input(Vector2.UP, tank.pos)})
+	_check(front.pos.y < stuck.y - 1.0, "the stun wears off")
+
+
+func _test_shield() -> void:
+	var duel := _duel(Vector2(-3.0, 0.0), Vector2(3.0, 0.0), "scutum", "sagitta")
+	var world: SimWorld = duel[0]
+	var tank: SimHero = duel[1]
+	var archer: SimHero = duel[2]
+	world.step({tank.id: _input(Vector2.ZERO, archer.pos, SimConst.BTN_ABILITY_2)})
+	_check(is_equal_approx(tank.shield, 450.0), "the rampart gives a shield")
+	world._damage_hero(tank, 300.0, SimConst.TEAM_DUSK, archer.id)
+	_check(is_equal_approx(tank.shield, 150.0) and is_equal_approx(tank.hp, tank.max_hp), "the shield absorbs damage before hp")
+	world._damage_hero(tank, 300.0, SimConst.TEAM_DUSK, archer.id)
+	_check(is_zero_approx(tank.shield) and is_equal_approx(tank.max_hp - tank.hp, 150.0), "damage beyond the shield reaches hp")
+	world.step({tank.id: _input(Vector2.ZERO, archer.pos, SimConst.BTN_ABILITY_2)})
+	_check(is_zero_approx(tank.shield) and tank.cooldowns[2] > 11.0, "the rampart is on cooldown")
+	tank.cooldowns[2] = 0.0
+	world.step({tank.id: _input(Vector2.ZERO, archer.pos, SimConst.BTN_ABILITY_2)})
+	_steps(world, 4.1)
+	_check(is_zero_approx(tank.shield), "an unused shield expires")
+
+
+func _test_support_heal_and_slow() -> void:
+	var arena := SimArena.new()
+	arena.spawns = [[Vector2.ZERO, Vector2(6.0, 0.0), Vector2(30.0, 0.0)], [Vector2(6.0, 2.0), Vector2(0.0, 8.0)]]
+	arena.half_size = Vector2(40.0, 20.0)
+	var world := SimWorld.new(arena)
+	var healer := world.add_hero(SimConst.TEAM_DAWN, "columba")
+	var ally := world.add_hero(SimConst.TEAM_DAWN)
+	var far_ally := world.add_hero(SimConst.TEAM_DAWN)
+	var enemy := world.add_hero(SimConst.TEAM_DUSK)
+	var runner := world.add_hero(SimConst.TEAM_DUSK)
+	for h: SimHero in [healer, ally, far_ally, enemy]:
+		h.hp = 300.0
+		h.last_hit_tick = world.tick  # Blessé à l'instant : pas de récupération hors combat.
+	world.step({healer.id: _input(Vector2.ZERO, ally.pos, SimConst.BTN_ABILITY_1)})
+	_check(is_equal_approx(ally.hp, 520.0), "the heal restores hp to an ally in the area")
+	_check(is_equal_approx(enemy.hp, 300.0), "the heal ignores enemies")
+	_check(is_equal_approx(healer.hp, 300.0), "the heal only reaches heroes inside its radius")
+	_check(healer.ether > 0.0, "healing fills the ether gauge")
+	# Viser trop loin : le soin se pose à la limite de portée, pas sur la cible.
+	healer.cooldowns[1] = 0.0
+	world.step({healer.id: _input(Vector2.ZERO, far_ally.pos, SimConst.BTN_ABILITY_1)})
+	_check(is_equal_approx(far_ally.hp, 300.0), "the heal cannot be cast beyond its range")
+	ally.hp = ally.max_hp - 50.0
+	healer.cooldowns[1] = 0.0
+	world.step({healer.id: _input(Vector2.ZERO, ally.pos, SimConst.BTN_ABILITY_1)})
+	_check(is_equal_approx(ally.hp, ally.max_hp), "the heal does not exceed max hp")
+
+	# L'entrave ralentit de moitié pendant 2,5 secondes.
+	world.step({healer.id: _input(Vector2.ZERO, runner.pos, SimConst.BTN_ABILITY_2)})
+	_steps(world, 0.5, {healer.id: _input(Vector2.ZERO, runner.pos)})
+	_check(runner.slow_ticks > 0 and runner.slow_pct == 50 and runner.hp < runner.max_hp, "the snare damages and slows its target")
+	var start := runner.pos
+	_steps(world, 1.0, {runner.id: _input(Vector2.DOWN, Vector2.ZERO)})
+	_check(absf(runner.pos.y - start.y - 3.0) < 0.05, "a slowed hero moves at half speed (%s)" % (runner.pos.y - start.y))
+	_steps(world, 2.0)
+	start = runner.pos
+	_steps(world, 1.0, {runner.id: _input(Vector2.UP, Vector2.ZERO)})
+	_check(absf(start.y - runner.pos.y - 6.0) < 0.05, "the slow wears off")
+
+
+func _test_talents() -> void:
+	var duel := _duel(Vector2(-3.0, 0.0), Vector2(3.0, 0.0))
+	var world: SimWorld = duel[0]
+	var a: SimHero = duel[1]
+	var b: SimHero = duel[2]
+	_check(HeroDefs.pending_talent_tier(a, 1) == -1, "no talent is offered at level 1")
+	_check(not world.choose_talent(a.id, 0, 1), "a talent cannot be chosen before its level")
+	world.team_level[SimConst.TEAM_DAWN] = 3
+	_check(HeroDefs.pending_talent_tier(a, 3) == 0, "the first tier opens at level 3")
+	_check(not world.choose_talent(a.id, 0, 3) and not world.choose_talent(a.id, 1, 1) and not world.choose_talent(99, 0, 1), "invalid choices are refused")
+	_check(world.choose_talent(a.id, 0, 1), "an open tier accepts a choice")
+	_check(not world.choose_talent(a.id, 0, 2), "a tier cannot be chosen twice")
+	_check(HeroDefs.pending_talent_tier(a, 3) == -1 and a.talents == [1, 0, 0], "the choice is recorded")
+	for i in 15:
+		world.step({a.id: _input(Vector2.ZERO, b.pos, SimConst.BTN_ATTACK)})
+	var expected := 90.0 * 1.2 * SimConst.level_multiplier(3)
+	_check(is_equal_approx(b.max_hp - b.hp, expected), "the talent raises basic attack damage by 20%% (dealt %s)" % (b.max_hp - b.hp))
+	# Talent de recharge sur la ruée : il s'applique aussi à la prédiction du client.
+	world.team_level[SimConst.TEAM_DAWN] = 6
+	_check(world.choose_talent(a.id, 1, 2), "the second tier opens at level 6")
+	var predicted := a.copy()
+	var dash := _input(Vector2.UP, b.pos, SimConst.BTN_ABILITY_2)
+	SimWorld.step_hero_local(predicted, dash, world.arena, SimConst.DT)
+	world.step({a.id: dash})
+	_check(is_equal_approx(a.cooldowns[2], 8.0 * 0.65) and is_equal_approx(predicted.cooldowns[2], a.cooldowns[2]), "a cooldown talent applies on the server and in prediction")
+
+	# Talent de vie maximale : la proportion de vie est conservée.
+	var tank := world.add_hero(SimConst.TEAM_DUSK, "scutum")
+	world.team_level[SimConst.TEAM_DUSK] = 3
+	tank.max_hp = world._hero_max_hp(tank)
+	tank.hp = tank.max_hp * 0.5
+	var before := tank.max_hp
+	_check(world.choose_talent(tank.id, 0, 1), "the tank takes its max hp talent")
+	_check(is_equal_approx(tank.max_hp, before * 1.15) and is_equal_approx(tank.hp / tank.max_hp, 0.5), "a max hp talent keeps the hp ratio")
+	world.reset_match()
+	_check(a.talents == [0, 0, 0] and tank.talents == [0, 0, 0] and is_equal_approx(tank.max_hp, 1700.0), "talents are reset for a new match")
+	# Chaque héros a deux choix pour chaque palier.
+	for def_id: String in HeroDefs.ids():
+		var tiers: Array = HeroDefs.get_def(def_id)["talents"]
+		_check(tiers.size() == SimConst.TALENT_LEVELS.size(), "%s has one talent tier per talent level" % def_id)
+		for tier: Array in tiers:
+			_check(tier.size() == 2, "%s has two choices per tier" % def_id)
+
+
+func _test_ether_and_awakening() -> void:
+	var duel := _duel(Vector2(-3.0, 0.0), Vector2(3.0, 0.0))
+	var world: SimWorld = duel[0]
+	var a: SimHero = duel[1]
+	var b: SimHero = duel[2]
+	for i in 15:
+		world.step({a.id: _input(Vector2.ZERO, b.pos, SimConst.BTN_ATTACK)})
+	_check(a.ether > 1.5 and b.ether > 0.8 and a.ether > b.ether, "dealing and taking damage fills the ether gauge (%s, %s)" % [a.ether, b.ether])
+	var partial := a.ether
+	world.step({a.id: _input(Vector2.ZERO, b.pos, SimConst.BTN_AWAKEN)})
+	_check(not a.is_awakened() and a.ether >= partial, "awakening needs a full gauge")
+
+	b.hp = b.max_hp
+	a.ether = SimConst.ETHER_MAX
+	a.cooldowns[0] = 0.0
+	world.projectiles.clear()
+	world.step({a.id: _input(Vector2.ZERO, b.pos, SimConst.BTN_AWAKEN)})
+	_check(a.awaken_ticks == SimConst.AWAKEN_TICKS and is_zero_approx(a.ether), "a full gauge triggers the awakening and empties")
+	_check(_has_event(world, "awaken"), "the awakening is reported as an event")
+	_check(world.projectiles.size() == 7, "the archer's ultimate fires a volley of seven bolts")
+	_steps(world, 0.5, {a.id: _input(Vector2.ZERO, b.pos, SimConst.BTN_AWAKEN)})
+	_check(b.hp < b.max_hp and world.projectiles.size() <= 7, "the volley hits and holding the button does not fire it again")
+	_check(is_zero_approx(a.ether), "the gauge stays empty during the awakening")
+
+	# Pendant l'éveil : dégâts +25 %, déplacement +15 %.
+	b.hp = b.max_hp
+	b.pos = Vector2(3.0, 0.0)
+	a.pos = Vector2(-3.0, 0.0)
+	world.projectiles.clear()
+	for i in 15:
+		world.step({a.id: _input(Vector2.ZERO, b.pos, SimConst.BTN_ATTACK)})
+	_check(is_equal_approx(b.max_hp - b.hp, 90.0 * SimConst.AWAKEN_POWER), "damage is raised during the awakening (dealt %s)" % (b.max_hp - b.hp))
+	var start := a.pos
+	_steps(world, 1.0, {a.id: _input(Vector2.UP, Vector2(0.0, -50.0))})
+	_check(absf(start.y - a.pos.y - 6.0 * SimConst.AWAKEN_SPEED) < 0.05, "movement is faster during the awakening")
+	_steps(world, 8.0)
+	_check(not a.is_awakened() and a.ether > 0.0, "the awakening ends and the gauge fills again")
+
+	# Les deux autres capacités ultimes.
+	var arena := SimArena.new()
+	arena.spawns = [[Vector2.ZERO, Vector2(2.0, 0.0)], [Vector2(-4.0, 0.0), Vector2(0.0, 5.0)]]
+	var other := SimWorld.new(arena)
+	var tank := other.add_hero(SimConst.TEAM_DAWN, "scutum")
+	var healer := other.add_hero(SimConst.TEAM_DAWN, "columba")
+	var foe_a := other.add_hero(SimConst.TEAM_DUSK)
+	var foe_b := other.add_hero(SimConst.TEAM_DUSK)
+	tank.ether = SimConst.ETHER_MAX
+	other.step({tank.id: _input(Vector2.ZERO, Vector2(10.0, 0.0), SimConst.BTN_AWAKEN)})
+	_check(foe_a.hp < foe_a.max_hp and foe_b.hp < foe_b.max_hp and foe_a.stun_ticks == 44, "the tank's ultimate hits and stuns all around")
+	tank.hp = 500.0
+	healer.hp = 200.0
+	healer.ether = SimConst.ETHER_MAX
+	other.step({healer.id: _input(Vector2.ZERO, Vector2(10.0, 0.0), SimConst.BTN_AWAKEN)})
+	_check(tank.hp > 900.0 and healer.hp > 600.0, "the support's ultimate heals nearby allies")
+	_check(tank.shield > 250.0 and healer.shield > 250.0, "the support's ultimate shields nearby allies")
+
+
+func _test_armor_ranks() -> void:
+	_check(SimConst.armor_rank(1) == SimConst.RANK_BRONZE and SimConst.armor_rank(4) == SimConst.RANK_BRONZE, "armor is bronze at first")
+	_check(SimConst.armor_rank(5) == SimConst.RANK_SILVER and SimConst.armor_rank(9) == SimConst.RANK_SILVER, "armor turns silver at level 5")
+	_check(SimConst.armor_rank(10) == SimConst.RANK_GOLD and SimConst.armor_rank(20) == SimConst.RANK_GOLD, "armor turns gold at level 10")
+	var duel := _duel(Vector2(-3.0, 0.0), Vector2(3.0, 0.0))
+	var world: SimWorld = duel[0]
+	var b: SimHero = duel[2]
+	world._damage_hero(b, 100.0, SimConst.TEAM_DAWN, 0)
+	_check(is_equal_approx(b.max_hp - b.hp, 100.0), "bronze armor absorbs nothing")
+	world._grant_xp(SimConst.TEAM_DUSK, 99999.0)
+	_check(world.team_level[SimConst.TEAM_DUSK] == SimConst.MAX_LEVEL, "experience is capped at the max level")
+	var hp := b.hp
+	world._damage_hero(b, 100.0, SimConst.TEAM_DAWN, 0)
+	_check(is_equal_approx(hp - b.hp, 85.0), "gold armor absorbs 15%% of the damage (took %s)" % (hp - b.hp))
+
+
+# ---------------------------------------------------------------------------
 # Réseau : photographie du monde
 # ---------------------------------------------------------------------------
 
@@ -499,13 +726,25 @@ func _test_snapshot_roundtrip() -> void:
 	world._damage_structure(_structure(world, SimConst.TEAM_DAWN, 0, 0), 500.0, SimConst.TEAM_DUSK)
 	_steps(world, SimConst.FIRST_WAVE + 1.0, {a.id: _input(Vector2(0.3, 0.7), b.pos, SimConst.BTN_ATTACK, 9)})
 	world.step({a.id: _input(Vector2.ZERO, b.pos, SimConst.BTN_ATTACK | SimConst.BTN_ABILITY_1, 10)})
+	var tank := world.add_hero(SimConst.TEAM_DAWN, "scutum")
+	tank.ether = 63.7
+	tank.awaken_ticks = 120
+	tank.stun_ticks = 14
+	tank.slow_ticks = 40
+	tank.slow_pct = 50
+	tank.shield = 321.0
+	tank.talents = [2, 1, 0]
 	var wire := world.to_snapshot()
 	var snap := SimSnapshot.from_bytes(wire, SimArena.make_default())
 	_check(snap != null, "a snapshot decodes")
 	if snap == null:
 		return
+	var tank2: SimHero = snap.heroes[tank.id]
+	_check(tank2.def_id == "scutum" and is_equal_approx(tank2.ether, 63.0), "hero kind and ether survive the roundtrip")
+	_check(tank2.awaken_ticks == 120 and tank2.stun_ticks == 14 and tank2.slow_ticks == 40 and tank2.slow_pct == 50, "status timers survive the roundtrip exactly")
+	_check(is_equal_approx(tank2.shield, 321.0) and tank2.talents == [2, 1, 0], "shield and talents survive the roundtrip")
 	var a2: SimHero = snap.heroes[a.id]
-	_check(snap.tick == world.tick and snap.heroes.size() == 2, "tick and heroes survive the roundtrip")
+	_check(snap.tick == world.tick and snap.heroes.size() == 3, "tick and heroes survive the roundtrip")
 	_check(a2.pos.is_equal_approx(a.pos) and a2.last_seq == 10 and a2.team == a.team, "hero fields survive the roundtrip")
 	_check(a2.facing.is_equal_approx(a.facing) or a2.facing.distance_to(a.facing) < 0.001, "hero facing survives the roundtrip")
 	_check(is_equal_approx(a2.hp, ceilf(a.hp)) and is_equal_approx(a2.max_hp, a.max_hp), "hero hp survives the roundtrip")
@@ -536,7 +775,8 @@ func _test_snapshot_roundtrip() -> void:
 func _test_snapshot_fits_in_a_packet() -> void:
 	var world := SimWorld.new()
 	for i in SimConst.MAX_PLAYERS:
-		world.add_hero(i % 2)
+		var hero := world.add_hero(i % 2)
+		hero.ether = SimConst.ETHER_MAX
 	while world.units.size() < SimConst.MAX_UNITS_HARD:
 		var u := world._spawn_unit(UnitDefs.ARCHER, world.units.size() % 2, Vector2(world.units.size() - 30.0, 25.0))
 		u.attack_cd = 1000.0
@@ -544,7 +784,8 @@ func _test_snapshot_fits_in_a_packet() -> void:
 	for i in SimConst.TICK_RATE * 4:
 		var inputs: Dictionary = {}
 		for id: int in world.heroes:
-			inputs[id] = _input(Vector2.ZERO, Vector2(0.0, -30.0), SimConst.BTN_ATTACK | SimConst.BTN_ABILITY_1)
+			# Tout le monde tire et s'éveille en même temps : six volées de sept traits.
+			inputs[id] = _input(Vector2.ZERO, Vector2(0.0, -30.0), SimConst.BTN_ATTACK | SimConst.BTN_ABILITY_1 | SimConst.BTN_AWAKEN)
 		world.step(inputs)
 		while world.beams.size() < SimSnapshot.MAX_BEAMS + 4:
 			world.beams.append([SimWorld.BEAM_ARCHER, Vector2.ZERO, Vector2.ONE])

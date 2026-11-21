@@ -8,6 +8,7 @@ const LOCALES: Array[String] = ["fr", "en"]
 static var player_name: String = ""
 static var address: String = DEFAULT_ADDRESS
 static var locale: String = ""
+static var hero: String = HeroDefs.DEFAULT_HERO
 
 
 static func load_settings() -> void:
@@ -16,6 +17,9 @@ static func load_settings() -> void:
 		player_name = str(cfg.get_value("player", "name", ""))
 		address = str(cfg.get_value("network", "address", DEFAULT_ADDRESS))
 		locale = str(cfg.get_value("ui", "locale", ""))
+		hero = str(cfg.get_value("player", "hero", HeroDefs.DEFAULT_HERO))
+	if not HeroDefs.has_hero(hero):
+		hero = HeroDefs.DEFAULT_HERO
 	if not LOCALES.has(locale):
 		locale = "fr" if OS.get_locale_language() == "fr" else "en"
 	TranslationServer.set_locale(locale)
@@ -24,6 +28,7 @@ static func load_settings() -> void:
 static func save_settings() -> void:
 	var cfg := ConfigFile.new()
 	cfg.set_value("player", "name", player_name)
+	cfg.set_value("player", "hero", hero)
 	cfg.set_value("network", "address", address)
 	cfg.set_value("ui", "locale", locale)
 	cfg.save(PATH)

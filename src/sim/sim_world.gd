@@ -15,6 +15,10 @@ const TARGET_KEY := 100000
 const BEAM_STRUCTURE := 0
 const BEAM_ARCHER := 1
 const BEAM_RELIC := 2
+## Effets de zone, transmis par le même canal : [type, centre, point à la distance voulue].
+const FX_SLASH := 3
+const FX_RING := 4
+const FX_HEAL := 5
 
 var arena: SimArena
 var tick: int = 0
@@ -42,6 +46,7 @@ var relics_taken: int = 0
 ## Événements du dernier pas : [type, a, b].
 ##   kill(tueur ou 0, victime) · structure(rang, équipe attaquante) · relic_spawn
 ##   relic(équipe) · camp(équipe, rang) · level(équipe, niveau) · match_end(vainqueur)
+##   awaken(héros)
 var events: Array = []
 
 var _next_hero_id: int = 1
@@ -101,6 +106,8 @@ func reset_match() -> void:
 		var h: SimHero = heroes[id]
 		h.kills = 0
 		h.deaths = 0
+		h.talents = [0, 0, 0]
+		h.ether = 0.0
 		h.max_hp = _hero_max_hp(h)
 		_place_at_spawn(h)
 
@@ -129,18 +136,39 @@ func step(inputs: Dictionary) -> void:
 
 
 ## Partie de la mise à jour d'un héros qui ne dépend que de lui et de sa commande :
-## recharges, orientation, ruée, déplacement. Le client la rejoue pour prédire.
+## états (étourdissement, ralentissement, éveil), recharges, orientation, ruée, déplacement.
+## Le client la rejoue pour prédire.
 static func step_hero_local(h: SimHero, cmd: SimInput, p_arena: SimArena, dt: float) -> void:
+	h.just_awakened = false
 	if not h.alive:
 		return
 	var def: Dictionary = HeroDefs.get_def(h.def_id)
 	var abilities: Array = def["abilities"]
+	var radius: float = def["radius"]
 	for i in h.cooldowns.size():
 		h.cooldowns[i] = maxf(0.0, h.cooldowns[i] - dt)
+	if h.awaken_ticks > 0:
+		h.awaken_ticks -= 1
+	var slowed := h.slow_ticks > 0
+	if slowed:
+		h.slow_ticks -= 1
+
+	if h.stun_ticks > 0:
+		# Étourdi : le héros subit, rien d'autre.
+		h.stun_ticks -= 1
+		h.dash_left = 0.0
+		h.pos = p_arena.resolve_circle(h.pos, radius)
+		return
 
 	var to_aim := cmd.aim - h.pos
 	if to_aim.length_squared() > 0.0001:
 		h.facing = to_aim.normalized()
+
+	# Éveil : jauge d'éther pleine et bouton pressé.
+	if (cmd.buttons & SimConst.BTN_AWAKEN) != 0 and h.awaken_ticks <= 0 and h.ether >= SimConst.ETHER_MAX:
+		h.ether = 0.0
+		h.awaken_ticks = SimConst.AWAKEN_TICKS
+		h.just_awakened = true
 
 	var move := cmd.move.limit_length(1.0)
 	for slot in abilities.size():
@@ -151,18 +179,20 @@ static func step_hero_local(h: SimHero, cmd: SimInput, p_arena: SimArena, dt: fl
 			continue
 		var dir := move.normalized() if move.length_squared() > 0.01 else h.facing
 		var duration: float = ability["duration"]
-		var distance: float = ability["distance"]
-		h.dash_vel = dir * (distance / duration)
+		h.dash_vel = dir * (HeroDefs.value(h, slot, "distance") / duration)
 		h.dash_left = duration
-		h.cooldowns[slot] = ability["cooldown"]
+		h.cooldowns[slot] = HeroDefs.value(h, slot, "cooldown")
 
 	if h.dash_left > 0.0:
 		h.pos += h.dash_vel * minf(dt, h.dash_left)
 		h.dash_left = maxf(0.0, h.dash_left - dt)
 	else:
-		var speed: float = def["speed"]
+		var speed := HeroDefs.value(h, -1, "speed")
+		if slowed:
+			speed *= 1.0 - h.slow_pct / 100.0
+		if h.awaken_ticks > 0:
+			speed *= SimConst.AWAKEN_SPEED
 		h.pos += move * speed * dt
-	var radius: float = def["radius"]
 	h.pos = p_arena.resolve_circle(h.pos, radius)
 
 
@@ -183,40 +213,161 @@ func _step_heroes(inputs: Dictionary) -> void:
 			if h.respawn_left <= 0.0:
 				_place_at_spawn(h)
 			continue
+		var stunned := h.stun_ticks > 0
 		step_hero_local(h, cmd, arena, SimConst.DT)
-		_step_hero_actions(h, cmd)
-		_step_hero_regen(h)
+		if h.just_awakened:
+			events.append(["awaken", h.id, 0])
+		if not stunned:
+			_step_hero_actions(h, cmd)
+		_step_hero_upkeep(h)
 
 
 func _step_hero_actions(h: SimHero, cmd: SimInput) -> void:
-	var def: Dictionary = HeroDefs.get_def(h.def_id)
-	var abilities: Array = def["abilities"]
-	var hero_radius: float = def["radius"]
+	var abilities: Array = HeroDefs.get_def(h.def_id)["abilities"]
 	for slot in abilities.size():
 		var ability: Dictionary = abilities[slot]
-		if ability["type"] != "projectile":
+		var type: String = ability["type"]
+		if type == "dash":
 			continue
-		if (cmd.buttons & (1 << slot)) == 0 or h.cooldowns[slot] > 0.0:
-			continue
-		h.cooldowns[slot] = ability["cooldown"]
-		var p := SimProjectile.new()
-		p.id = _next_projectile_id
-		_next_projectile_id = _next_projectile_id % 0xFFFF + 1
-		p.kind = slot
-		p.team = h.team
-		p.owner_id = h.id
-		p.radius = ability["radius"]
-		var base_damage: float = ability["damage"]
-		p.damage = base_damage * SimConst.level_multiplier(team_level[h.team])
-		p.range_left = ability["range"]
-		p.pierce = ability["pierce"]
-		var speed: float = ability["speed"]
-		p.vel = h.facing * speed
-		p.pos = h.pos + h.facing * (hero_radius + p.radius)
-		projectiles.append(p)
+		if ability.get("awakening", false):
+			# La capacité ultime part au moment de l'éveil, sans recharge.
+			if not h.just_awakened:
+				continue
+		else:
+			if (cmd.buttons & (1 << slot)) == 0 or h.cooldowns[slot] > 0.0:
+				continue
+			h.cooldowns[slot] = HeroDefs.value(h, slot, "cooldown")
+		match type:
+			"projectile":
+				_cast_projectile(h, slot, ability, h.facing)
+			"volley":
+				var count := maxi(int(HeroDefs.value(h, slot, "count")), 1)
+				var spread := deg_to_rad(HeroDefs.value(h, slot, "spread"))
+				for i in count:
+					var offset := 0.0 if count == 1 else lerpf(-spread * 0.5, spread * 0.5, float(i) / (count - 1))
+					_cast_projectile(h, slot, ability, h.facing.rotated(offset))
+			"melee":
+				_cast_melee(h, slot)
+			"shield":
+				_give_shield(h, HeroDefs.value(h, slot, "amount") * _power(h), HeroDefs.value(h, slot, "duration"))
+			"heal_area":
+				_cast_heal_area(h, slot, ability, cmd.aim)
 
 
-func _step_hero_regen(h: SimHero) -> void:
+## Multiplicateur des dégâts, soins et boucliers d'un héros : niveau d'équipe et éveil.
+func _power(h: SimHero) -> float:
+	var power := SimConst.level_multiplier(team_level[h.team])
+	if h.is_awakened():
+		power *= SimConst.AWAKEN_POWER
+	return power
+
+
+func _cast_projectile(h: SimHero, slot: int, ability: Dictionary, dir: Vector2) -> void:
+	var hero_radius: float = HeroDefs.get_def(h.def_id)["radius"]
+	var p := SimProjectile.new()
+	p.id = _next_projectile_id
+	_next_projectile_id = _next_projectile_id % 0xFFFF + 1
+	# L'apparence suit la taille du projectile : petit tir ou gros trait.
+	p.kind = 1 if HeroDefs.value(h, slot, "radius") > 0.3 else 0
+	p.team = h.team
+	p.owner_id = h.id
+	p.radius = HeroDefs.value(h, slot, "radius")
+	p.damage = HeroDefs.value(h, slot, "damage") * _power(h)
+	p.range_left = HeroDefs.value(h, slot, "range")
+	p.pierce = ability["pierce"]
+	if ability.has("stun"):
+		p.stun_ticks = SimConst.ticks(HeroDefs.value(h, slot, "stun"))
+	if ability.has("slow"):
+		p.slow_pct = roundi(HeroDefs.value(h, slot, "slow") * 100.0)
+		p.slow_ticks = SimConst.ticks(HeroDefs.value(h, slot, "slow_duration"))
+	p.vel = dir * HeroDefs.value(h, slot, "speed")
+	p.pos = h.pos + dir * (hero_radius + p.radius)
+	projectiles.append(p)
+
+
+## Coup au corps à corps : touche tous les adversaires dans un secteur devant le héros.
+func _cast_melee(h: SimHero, slot: int) -> void:
+	var ability: Dictionary = HeroDefs.get_def(h.def_id)["abilities"][slot]
+	var reach := HeroDefs.value(h, slot, "range")
+	var arc := HeroDefs.value(h, slot, "arc")
+	var amount := HeroDefs.value(h, slot, "damage") * _power(h)
+	var stun := SimConst.ticks(HeroDefs.value(h, slot, "stun")) if ability.has("stun") else 0
+	if arc >= 360.0:
+		beams.append([FX_RING, h.pos, h.pos + Vector2(reach, 0.0)])
+	else:
+		beams.append([FX_SLASH, h.pos, h.pos + h.facing * reach])
+	for id in heroes:
+		var other: SimHero = heroes[id]
+		if not other.alive or other.team == h.team:
+			continue
+		var other_radius: float = HeroDefs.get_def(other.def_id)["radius"]
+		if _in_arc(h, reach, arc, other.pos, other_radius):
+			_damage_hero(other, amount, h.team, h.id)
+			if stun > 0 and other.alive:
+				other.stun_ticks = maxi(other.stun_ticks, stun)
+	for u in units:
+		if not u.alive or u.team == h.team:
+			continue
+		var unit_radius: float = UnitDefs.get_def(u.kind)["radius"]
+		if _in_arc(h, reach, arc, u.pos, unit_radius):
+			_damage_unit(u, amount, h.team, h.id)
+			_add_ether(h, amount * SimConst.ETHER_PER_OTHER_DAMAGE)
+	for s in structures:
+		if s.alive and s.team != h.team and _in_arc(h, reach, arc, s.pos, s.radius):
+			_damage_structure(s, amount, h.team)
+			_add_ether(h, amount * SimConst.ETHER_PER_OTHER_DAMAGE)
+
+
+func _in_arc(h: SimHero, reach: float, arc: float, target_pos: Vector2, target_radius: float) -> bool:
+	var to := target_pos - h.pos
+	var dist := to.length()
+	if dist - target_radius > reach:
+		return false
+	if arc >= 360.0 or dist < 0.001:
+		return true
+	# La cible compte dès que son bord entre dans le secteur.
+	var half := deg_to_rad(arc * 0.5) + asin(clampf(target_radius / dist, 0.0, 1.0))
+	return absf(h.facing.angle_to(to)) <= half
+
+
+## Soin de zone : autour du point visé (limité à la portée), ou autour du héros.
+func _cast_heal_area(h: SimHero, slot: int, ability: Dictionary, aim: Vector2) -> void:
+	var center := h.pos
+	if not ability.get("self", false):
+		center = h.pos + (aim - h.pos).limit_length(HeroDefs.value(h, slot, "range"))
+	var radius := HeroDefs.value(h, slot, "radius")
+	var amount := HeroDefs.value(h, slot, "amount") * _power(h)
+	beams.append([FX_HEAL, center, center + Vector2(radius, 0.0)])
+	for id in heroes:
+		var ally: SimHero = heroes[id]
+		if not ally.alive or ally.team != h.team or ally.pos.distance_to(center) > radius:
+			continue
+		var healed := minf(amount, ally.max_hp - ally.hp)
+		ally.hp += healed
+		_add_ether(h, healed * SimConst.ETHER_PER_HEAL)
+		if ability.has("shield"):
+			var shield: float = ability["shield"]
+			_give_shield(ally, shield * _power(h), 4.0)
+
+
+func _give_shield(h: SimHero, amount: float, duration: float) -> void:
+	h.shield = maxf(h.shield, amount)
+	h.shield_ticks = maxi(h.shield_ticks, SimConst.ticks(duration))
+
+
+func _add_ether(h: SimHero, amount: float) -> void:
+	# Pendant l'éveil la jauge reste vide : elle se remplit à nouveau ensuite.
+	if h != null and h.alive and not h.is_awakened():
+		h.ether = minf(SimConst.ETHER_MAX, h.ether + amount)
+
+
+## Entretien d'un héros à chaque pas : bouclier qui s'épuise, éther, récupération.
+func _step_hero_upkeep(h: SimHero) -> void:
+	if h.shield_ticks > 0:
+		h.shield_ticks -= 1
+		if h.shield_ticks == 0:
+			h.shield = 0.0
+	_add_ether(h, SimConst.ETHER_PER_SECOND * SimConst.DT)
 	var gain := 0.0
 	if (tick - h.last_hit_tick) * SimConst.DT >= SimConst.REGEN_DELAY:
 		gain += SimConst.REGEN_RATE
@@ -237,10 +388,11 @@ func _step_waves() -> void:
 	if _wave_timer > 0.0:
 		return
 	_wave_timer = SimConst.WAVE_INTERVAL
+	# Une vague part entière pour les deux équipes, ou pas du tout : sinon l'une serait lésée.
+	if units.size() + UnitDefs.WAVE.size() * arena.lanes.size() * 2 > SimConst.MAX_UNITS:
+		return
 	for lane in arena.lanes.size():
 		for team in 2:
-			if units.size() + UnitDefs.WAVE.size() > SimConst.MAX_UNITS:
-				return
 			var path := arena.lane_path(lane, team)
 			var heading := (path[1] - path[0]).normalized()
 			for entry: Array in UnitDefs.WAVE:
@@ -611,12 +763,21 @@ func _step_projectiles() -> void:
 			p.hit_ids.append(hit[1] * TARGET_KEY + target_id)
 			match hit[1]:
 				SimUnit.TARGET_HERO:
-					_damage_hero(heroes[target_id], p.damage, p.team, p.owner_id)
+					var victim: SimHero = heroes[target_id]
+					_damage_hero(victim, p.damage, p.team, p.owner_id)
+					if victim.alive:
+						if p.stun_ticks > 0:
+							victim.stun_ticks = maxi(victim.stun_ticks, p.stun_ticks)
+						if p.slow_ticks > 0:
+							victim.slow_ticks = maxi(victim.slow_ticks, p.slow_ticks)
+							victim.slow_pct = p.slow_pct
 				SimUnit.TARGET_UNIT:
 					_damage_unit(_units_by_id[target_id], p.damage, p.team, p.owner_id)
+					_add_ether(heroes.get(p.owner_id), p.damage * SimConst.ETHER_PER_OTHER_DAMAGE)
 				SimUnit.TARGET_STRUCTURE:
 					# Un bâtiment arrête tous les projectiles, même perforants.
 					_damage_structure(structures[target_id], p.damage, p.team)
+					_add_ether(heroes.get(p.owner_id), p.damage * SimConst.ETHER_PER_OTHER_DAMAGE)
 					spent = true
 			if spent or not p.pierce:
 				spent = true
@@ -707,7 +868,14 @@ func _capture_relic(team: int) -> void:
 func _damage_hero(target: SimHero, amount: float, source_team: int, source_hero_id: int) -> void:
 	if not target.alive:
 		return
-	target.hp = maxf(0.0, target.hp - amount)
+	# L'armure absorbe une part des dégâts selon son rang, puis le bouclier, puis la vie.
+	amount *= 1.0 - SimConst.RANK_REDUCTION[SimConst.armor_rank(team_level[target.team])]
+	var killer: SimHero = heroes.get(source_hero_id)
+	_add_ether(target, amount * SimConst.ETHER_PER_DAMAGE_TAKEN)
+	_add_ether(killer, amount * SimConst.ETHER_PER_HERO_DAMAGE)
+	var absorbed := minf(target.shield, amount)
+	target.shield -= absorbed
+	target.hp = maxf(0.0, target.hp - (amount - absorbed))
 	target.last_hit_tick = tick
 	if target.hp > 0.0:
 		return
@@ -715,10 +883,16 @@ func _damage_hero(target: SimHero, amount: float, source_team: int, source_hero_
 	target.respawn_left = SimConst.respawn_time(team_level[target.team])
 	target.dash_left = 0.0
 	target.channeling = false
+	target.shield = 0.0
+	target.shield_ticks = 0
+	target.stun_ticks = 0
+	target.slow_ticks = 0
+	target.awaken_ticks = 0
+	target.ether *= 0.5
 	target.deaths += 1
-	var killer: SimHero = heroes.get(source_hero_id)
 	if killer != null:
 		killer.kills += 1
+		_add_ether(killer, SimConst.ETHER_PER_KILL)
 	if source_team == 1 - target.team:
 		team_kills[source_team] += 1
 		_grant_xp(source_team, SimConst.XP_HERO_KILL + SimConst.XP_HERO_KILL_PER_LEVEL * team_level[target.team])
@@ -818,8 +992,24 @@ func _hero_near(team: int, pos: Vector2, distance: float) -> bool:
 
 
 func _hero_max_hp(h: SimHero) -> float:
-	var base: float = HeroDefs.get_def(h.def_id)["max_hp"]
-	return base * SimConst.level_multiplier(team_level[h.team])
+	return HeroDefs.value(h, -1, "max_hp") * SimConst.level_multiplier(team_level[h.team])
+
+
+## Choisit un talent pour un héros. Refusé si le palier n'est pas ouvert ou déjà choisi.
+func choose_talent(hero_id: int, tier: int, choice: int) -> bool:
+	var h: SimHero = heroes.get(hero_id)
+	if h == null or match_over:
+		return false
+	if tier < 0 or tier >= SimConst.TALENT_LEVELS.size() or choice < 1 or choice > 2:
+		return false
+	if team_level[h.team] < SimConst.TALENT_LEVELS[tier] or h.talents[tier] != 0:
+		return false
+	h.talents[tier] = choice
+	# Un talent peut changer la vie maximale : garder la même proportion de vie.
+	var ratio := h.hp / maxf(h.max_hp, 1.0)
+	h.max_hp = _hero_max_hp(h)
+	h.hp = h.max_hp * ratio
+	return true
 
 
 # ---------------------------------------------------------------------------
@@ -861,6 +1051,11 @@ func _place_at_spawn(h: SimHero) -> void:
 	h.dash_left = 0.0
 	h.dash_vel = Vector2.ZERO
 	h.channeling = false
+	h.shield = 0.0
+	h.shield_ticks = 0
+	h.stun_ticks = 0
+	h.slow_ticks = 0
+	h.awaken_ticks = 0
 	h.last_hit_tick = -100000
 	for i in h.cooldowns.size():
 		h.cooldowns[i] = 0.0

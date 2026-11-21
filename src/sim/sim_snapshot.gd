@@ -6,7 +6,7 @@ extends RefCounted
 
 const HEADER_SIZE := 20
 const BEAM_SIZE := 9
-const MAX_PROJECTILES := 16
+const MAX_PROJECTILES := 22
 const MAX_BEAMS := 12
 
 var arena: SimArena

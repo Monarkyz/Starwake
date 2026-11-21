@@ -14,6 +14,10 @@ var damage: float = 0.0
 var range_left: float = 0.0
 ## Un projectile perforant traverse les héros et touche chacun une seule fois.
 var pierce: bool = false
+# Effets appliqués au héros touché (connus du serveur seulement).
+var stun_ticks: int = 0
+var slow_ticks: int = 0
+var slow_pct: int = 0
 ## Cibles déjà touchées : type de cible * SimWorld.TARGET_KEY + identifiant.
 var hit_ids: Array[int] = []
 
