@@ -16,7 +16,7 @@ class_name HeroDefs
 ##   "shield"     : cooldown, amount, duration
 ##   "heal_area"  : cooldown, amount, range, radius ; options : self (centré sur le héros), shield
 ##   "haste"      : cooldown, haste (part de vitesse gagnée), duration, radius (0 : soi seulement,
-##                  sinon tous les alliés autour)
+##                  sinon tous les alliés autour) ; option shield (bouclier donné en même temps)
 ##
 ## Effets en option sur projectile, volley, melee, zone et dash offensif :
 ##   stun (secondes) · slow (0 à 1) avec slow_duration · knockback (distance ; négatif :
@@ -190,14 +190,14 @@ const DEFS: Dictionary = {
 		"name_key": "HERO_CORVUS",
 		"role_key": "ROLE_ASSASSIN",
 		"look": "duelist",
-		"max_hp": 1020.0,
+		"max_hp": 1120.0,
 		"speed": 6.4,
 		"radius": 0.55,
 		"preferred_range": 1.5,
 		"abilities": [
-			{"name_key": "ABILITY_CORVUS_ATTACK", "type": "melee", "ai": "damage", "cooldown": 0.55, "damage": 92.0, "range": 2.4, "arc": 100.0, "lifesteal": 0.2},
+			{"name_key": "ABILITY_CORVUS_ATTACK", "type": "melee", "ai": "damage", "cooldown": 0.55, "damage": 92.0, "range": 2.4, "arc": 100.0, "lifesteal": 0.3},
 			{"name_key": "ABILITY_CORVUS_DIVE", "type": "dash", "ai": "engage", "aim": true, "cooldown": 7.0, "distance": 6.5, "duration": 0.18, "damage": 200.0},
-			{"name_key": "ABILITY_CORVUS_NIGHT", "type": "haste", "ai": "haste", "cooldown": 11.0, "haste": 0.4, "duration": 3.0, "radius": 0.0},
+			{"name_key": "ABILITY_CORVUS_NIGHT", "type": "haste", "ai": "haste", "cooldown": 9.0, "haste": 0.45, "duration": 3.0, "radius": 0.0},
 			{"name_key": "ABILITY_CORVUS_ULT", "type": "volley", "ai": "awaken", "awakening": true, "cooldown": 0.0, "damage": 150.0, "speed": 26.0, "range": 7.0, "radius": 0.3, "pierce": true, "count": 12.0, "spread": 360.0},
 		],
 		"talents": [
@@ -225,8 +225,8 @@ const DEFS: Dictionary = {
 		"preferred_range": 8.0,
 		"abilities": [
 			{"name_key": "ABILITY_CRATER_ATTACK", "type": "projectile", "ai": "damage", "cooldown": 0.7, "damage": 66.0, "speed": 22.0, "range": 9.5, "radius": 0.22, "pierce": false},
-			{"name_key": "ABILITY_CRATER_NECTAR", "type": "heal_area", "ai": "heal", "cooldown": 5.0, "amount": 190.0, "range": 9.0, "radius": 2.6},
-			{"name_key": "ABILITY_CRATER_HASTE", "type": "haste", "ai": "haste", "cooldown": 11.0, "haste": 0.35, "duration": 3.0, "radius": 6.0},
+			{"name_key": "ABILITY_CRATER_NECTAR", "type": "heal_area", "ai": "heal", "cooldown": 5.0, "amount": 190.0, "range": 9.0, "radius": 3.1},
+			{"name_key": "ABILITY_CRATER_HASTE", "type": "haste", "ai": "haste", "cooldown": 11.0, "haste": 0.35, "duration": 3.0, "radius": 6.0, "shield": 170.0},
 			{"name_key": "ABILITY_CRATER_ULT", "type": "heal_area", "ai": "awaken", "awakening": true, "cooldown": 0.0, "amount": 250.0, "range": 0.0, "radius": 9.0, "self": true, "shield": 400.0},
 		],
 		"talents": [
@@ -249,12 +249,12 @@ const DEFS: Dictionary = {
 		"role_key": "ROLE_TANK",
 		"look": "tank",
 		"max_hp": 2000.0,
-		"speed": 5.6,
+		"speed": 5.8,
 		"radius": 0.85,
 		"preferred_range": 1.7,
 		"abilities": [
 			{"name_key": "ABILITY_CETUS_ATTACK", "type": "melee", "ai": "damage", "cooldown": 1.0, "damage": 132.0, "range": 2.8, "arc": 130.0},
-			{"name_key": "ABILITY_CETUS_WAVE", "type": "projectile", "ai": "damage", "cooldown": 8.0, "damage": 150.0, "speed": 14.0, "range": 10.0, "radius": 0.9, "pierce": true, "knockback": 3.0},
+			{"name_key": "ABILITY_CETUS_WAVE", "type": "projectile", "ai": "damage", "cooldown": 8.0, "damage": 150.0, "speed": 14.0, "range": 10.0, "radius": 0.9, "pierce": true, "knockback": 1.2, "slow": 0.4, "slow_duration": 2.5},
 			{"name_key": "ABILITY_CETUS_SHELL", "type": "shield", "ai": "shield", "cooldown": 13.0, "amount": 550.0, "duration": 4.0},
 			{"name_key": "ABILITY_CETUS_ULT", "type": "zone", "ai": "awaken", "awakening": true, "cooldown": 0.0, "damage": 280.0, "range": 0.0, "radius": 7.0, "delay": 0.8, "self": true, "stun": 1.2},
 		],

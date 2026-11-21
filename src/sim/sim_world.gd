@@ -515,6 +515,7 @@ func _step_zones() -> void:
 
 ## Hâte : accélère le lanceur, ou tous les alliés autour de lui si la capacité a un rayon.
 func _cast_haste(h: SimHero, slot: int) -> void:
+	var ability: Dictionary = HeroDefs.get_def(h.def_id)["abilities"][slot]
 	var radius := HeroDefs.value(h, slot, "radius")
 	var pct := roundi(HeroDefs.value(h, slot, "haste") * 100.0)
 	var duration := SimConst.ticks(HeroDefs.value(h, slot, "duration"))
@@ -528,6 +529,8 @@ func _cast_haste(h: SimHero, slot: int) -> void:
 			continue
 		ally.haste_pct = maxi(ally.haste_pct if ally.haste_ticks > 0 else 0, pct)
 		ally.haste_ticks = maxi(ally.haste_ticks, duration)
+		if ability.has("shield"):
+			_give_shield(ally, HeroDefs.value(h, slot, "shield") * _power(h), HeroDefs.value(h, slot, "duration"))
 
 
 func _in_arc(h: SimHero, reach: float, arc: float, target_pos: Vector2, target_radius: float) -> bool:

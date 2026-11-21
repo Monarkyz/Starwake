@@ -878,9 +878,11 @@ func _test_knockback_and_pull() -> void:
 	var world: SimWorld = duel[0]
 	var whale: SimHero = duel[1]
 	var target: SimHero = duel[2]
+	var push := HeroDefs.value(whale, 1, "knockback")
 	world.step({whale.id: _input(Vector2.ZERO, target.pos, SimConst.BTN_ABILITY_1)})
 	_steps(world, 1.0)
-	_check(target.hp < target.max_hp and absf(target.pos.x - 8.0) < 0.3, "the groundswell pushes its target 3 units away (x=%s)" % target.pos.x)
+	_check(push > 0.0 and target.hp < target.max_hp and absf(target.pos.x - 5.0 - push) < 0.3, "the groundswell pushes its target away (x=%s)" % target.pos.x)
+	_check(target.slow_ticks > 0, "the groundswell also slows its target")
 	_check(absf(target.pos.y) < 0.2, "the push follows the direction of the shot")
 	# Le client peut rejouer la poussée : elle voyage comme une ruée.
 	_check(is_zero_approx(target.dash_left), "the push is over after a moment")
@@ -985,8 +987,9 @@ func _test_haste_and_lifesteal() -> void:
 	# Hâte : +40 % de vitesse pendant 3 secondes, prédite à l'identique par le client.
 	target.pos = Vector2(30.0, 10.0)
 	raven.pos = Vector2.ZERO
+	var haste := HeroDefs.value(raven, 2, "haste")
 	world.step({raven.id: _input(Vector2.ZERO, Vector2(0.0, -10.0), SimConst.BTN_ABILITY_2)})
-	_check(raven.haste_ticks == 90 and raven.haste_pct == 40, "haste is applied for its duration")
+	_check(raven.haste_ticks == 90 and raven.haste_pct == roundi(haste * 100.0) and haste > 0.0, "haste is applied for its duration")
 	var predicted := raven.copy()
 	var start := raven.pos
 	var worst := 0.0
@@ -995,7 +998,7 @@ func _test_haste_and_lifesteal() -> void:
 		SimWorld.step_hero_local(predicted, cmd, world.arena, SimConst.DT)
 		world.step({raven.id: cmd})
 		worst = maxf(worst, predicted.pos.distance_to(raven.pos))
-	_check(absf(start.y - raven.pos.y - 6.4 * 1.4) < 0.05, "a hasted hero moves 40%% faster (%s)" % (start.y - raven.pos.y))
+	_check(absf(start.y - raven.pos.y - 6.4 * (1.0 + haste)) < 0.05, "a hasted hero moves faster (%s)" % (start.y - raven.pos.y))
 	_check(worst < 0.0001, "haste is predicted identically by the client")
 	_steps(world, 2.5)
 	start = raven.pos
@@ -1014,6 +1017,7 @@ func _test_haste_and_lifesteal() -> void:
 	other.step({hebe.id: _input(Vector2.ZERO, Vector2(5.0, 0.0), SimConst.BTN_ABILITY_2)})
 	_check(hebe.haste_ticks > 0 and near.haste_ticks > 0, "an area haste speeds up nearby allies")
 	_check(far.haste_ticks == 0 and foe.haste_ticks == 0, "an area haste ignores distant allies and enemies")
+	_check(near.shield > 0.0 and hebe.shield > 0.0 and is_zero_approx(far.shield) and is_zero_approx(foe.shield), "a haste can shield the same allies")
 	# La hâte voyage sur le réseau.
 	var copy := SimSnapshot.from_bytes(other.to_snapshot(), arena)
 	var near2: SimHero = copy.heroes[near.id]

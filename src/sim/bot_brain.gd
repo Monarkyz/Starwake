@@ -117,7 +117,9 @@ func _engage_buttons(me: SimHero, dist: float) -> int:
 	for slot in abilities.size():
 		var ability: Dictionary = abilities[slot]
 		if ability.get("ai", "") == "engage" and dist > 2.8 and dist < HeroDefs.value(me, slot, "distance") + 1.5:
-			buttons |= 1 << slot
+			# Se jeter sur l'adversaire quand on est déjà blessé revient à mourir.
+			if me.hp >= me.max_hp * 0.5:
+				buttons |= 1 << slot
 	return buttons
 
 
