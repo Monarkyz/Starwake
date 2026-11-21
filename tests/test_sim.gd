@@ -973,11 +973,12 @@ func _test_haste_and_lifesteal() -> void:
 	var world: SimWorld = duel[0]
 	var raven: SimHero = duel[1]
 	var target: SimHero = duel[2]
-	# Vol de vie : 15 % des dégâts infligés reviennent en vie.
+	# Vol de vie : une part des dégâts infligés revient en vie.
+	var lifesteal := HeroDefs.value(raven, 0, "lifesteal")
 	raven.hp = 500.0
 	raven.last_hit_tick = world.tick
 	world.step({raven.id: _input(Vector2.ZERO, target.pos, SimConst.BTN_ATTACK)})
-	_check(is_equal_approx(target.max_hp - target.hp, 85.0) and is_equal_approx(raven.hp, 500.0 + 85.0 * 0.15), "a lifesteal attack heals its user (hp=%s)" % raven.hp)
+	_check(lifesteal > 0.0 and is_equal_approx(target.max_hp - target.hp, 85.0) and is_equal_approx(raven.hp, 500.0 + 85.0 * lifesteal), "a lifesteal attack heals its user (hp=%s)" % raven.hp)
 
 	# Hâte : +40 % de vitesse pendant 3 secondes, prédite à l'identique par le client.
 	target.pos = Vector2(30.0, 10.0)
