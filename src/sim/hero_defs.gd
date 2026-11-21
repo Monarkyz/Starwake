@@ -248,14 +248,14 @@ const DEFS: Dictionary = {
 		"name_key": "HERO_CETUS",
 		"role_key": "ROLE_TANK",
 		"look": "tank",
-		"max_hp": 2000.0,
+		"max_hp": 1900.0,
 		"speed": 5.8,
 		"radius": 0.85,
 		"preferred_range": 1.7,
 		"abilities": [
 			{"name_key": "ABILITY_CETUS_ATTACK", "type": "melee", "ai": "damage", "cooldown": 1.0, "damage": 132.0, "range": 2.8, "arc": 130.0},
-			{"name_key": "ABILITY_CETUS_WAVE", "type": "projectile", "ai": "damage", "cooldown": 8.0, "damage": 150.0, "speed": 14.0, "range": 10.0, "radius": 0.9, "pierce": true, "knockback": 1.2, "slow": 0.4, "slow_duration": 2.5},
-			{"name_key": "ABILITY_CETUS_SHELL", "type": "shield", "ai": "shield", "cooldown": 13.0, "amount": 550.0, "duration": 4.0},
+			{"name_key": "ABILITY_CETUS_WAVE", "type": "projectile", "ai": "damage", "cooldown": 8.0, "damage": 150.0, "speed": 14.0, "range": 10.0, "radius": 0.9, "pierce": true, "knockback": 1.2, "slow": 0.4, "slow_duration": 2.0},
+			{"name_key": "ABILITY_CETUS_SHELL", "type": "shield", "ai": "shield", "cooldown": 13.0, "amount": 480.0, "duration": 4.0},
 			{"name_key": "ABILITY_CETUS_ULT", "type": "zone", "ai": "awaken", "awakening": true, "cooldown": 0.0, "damage": 280.0, "range": 0.0, "radius": 7.0, "delay": 0.8, "self": true, "stun": 1.2},
 		],
 		"talents": [
