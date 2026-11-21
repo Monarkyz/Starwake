@@ -7,4 +7,8 @@ var _brain := BotBrain.new()
 
 
 func sample(client: GameClient) -> SimInput:
-	return _brain.think(client.local, client.get_latest_heroes(), client.arena)
+	var snap := client.latest_snapshot()
+	if snap == null:
+		return SimInput.new()
+	_brain.lane = client.my_hero_id % 2
+	return _brain.think(client.local, snap)

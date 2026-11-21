@@ -11,8 +11,10 @@ extends Node
 ##   --lang=fr                langue de l'interface pour ce lancement (fr ou en)
 ##   --autopilot              le client joue tout seul (tests)
 ##   --quit-after=20          quitter après ce nombre de secondes (tests)
-##   --exit-after-kills=1     le serveur s'arrête après ce nombre d'éliminations (tests)
+##   --exit-after-events=1    le serveur s'arrête après ce nombre d'événements de jeu (tests)
 ##   --screenshot=fichier.png enregistrer une image juste avant de quitter (tests)
+##   --time-scale=8           accélérer le jeu (tests ; serveur et client du même processus)
+##   --quit-on-match-end      quitter dès que la partie se termine (tests)
 
 const DEFAULT_PORT := 24565
 const TRAINING_BOTS := 5
@@ -36,6 +38,11 @@ func _ready() -> void:
 	if Settings.LOCALES.has(str(_opts.get("lang", ""))):
 		TranslationServer.set_locale(str(_opts["lang"]))
 
+	if _opts.has("time-scale"):
+		# La simulation avance d'un pas fixe : accélérer, c'est faire plus de pas par seconde.
+		var speed := clampi(int(_opts["time-scale"]), 1, 20)
+		Engine.physics_ticks_per_second = SimConst.TICK_RATE * speed
+		Engine.max_physics_steps_per_frame = 8 * speed
 	if _opts.has("quit-after"):
 		get_tree().create_timer(float(_opts["quit-after"])).timeout.connect(_on_quit_after)
 
@@ -49,6 +56,16 @@ func _ready() -> void:
 		_show_menu()
 
 
+func _process(_delta: float) -> void:
+	if _opts.has("quit-on-match-end") and _client != null:
+		var snap := _client.latest_snapshot()
+		if snap != null and snap.match_over:
+			_opts.erase("quit-on-match-end")
+			print("[client] match over winner=%d" % snap.winner)
+			# Laisser le temps d'afficher le résultat avant la capture.
+			get_tree().create_timer(0.5).timeout.connect(_on_quit_after)
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("leave_game") and _client != null and _menu != null:
 		_leave_game("")
@@ -57,7 +74,7 @@ func _unhandled_input(event: InputEvent) -> void:
 func _run_dedicated_server() -> void:
 	var port := int(_opts.get("port", DEFAULT_PORT))
 	_server = _make_server()
-	_server.exit_after_kills = int(_opts.get("exit-after-kills", 0))
+	_server.exit_after_events = int(_opts.get("exit-after-events", 0))
 	var err := _server.start(port, int(_opts.get("bots", 0)))
 	if err != OK:
 		printerr("[server] cannot listen on port %d (%s)" % [port, error_string(err)])
@@ -169,16 +186,17 @@ func _on_quit_after() -> void:
 		_print_client_stats()
 		if _client.state != GameClient.State.PLAYING or _client.stats["snapshots"] < 30:
 			code = 1
-	elif _server != null and _server.exit_after_kills > 0:
-		print("[server] kill target not reached (%d)" % _server.total_kills())
+	elif _server != null and _server.exit_after_events > 0:
+		print("[server] event target not reached (%d)" % _server.event_count)
 		code = 1
 	get_tree().quit(code)
 
 
 func _print_client_stats() -> void:
 	var stats := _client.stats
-	print("[client] stats state=%s snapshots=%d corrections=%d max_correction=%.3f" % [
-		GameClient.State.keys()[_client.state], stats["snapshots"], stats["corrections"], stats["max_correction"],
+	print("[client] stats state=%s snapshots=%d corrections=%d max_correction=%.3f max_units=%d" % [
+		GameClient.State.keys()[_client.state], stats["snapshots"], stats["corrections"],
+		stats["max_correction"], stats["max_units"],
 	])
 
 

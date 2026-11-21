@@ -7,7 +7,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 
 msgid "MENU_SUBTITLE"
-msgstr "Prototype — jalon 1 : le socle en ligne"
+msgstr "Prototype — jalon 2 : le sanctuaire"
 
 msgid "MENU_NAME_PLACEHOLDER"
 msgstr "Ton nom"
@@ -86,3 +86,48 @@ msgstr "Échap : retour au menu"
 
 msgid "FEED_KILL"
 msgstr "%s a vaincu %s"
+
+msgid "MENU_GOAL"
+msgstr "Détruis les temples adverses l'un après l'autre, puis leur sanctuaire. Reste près des combats de sbires pour faire monter le niveau de ton équipe. Canalise la relique au centre et vaincs les camps de mercenaires pour prendre l'avantage."
+
+msgid "HUD_LEVEL"
+msgstr "Niv. %d"
+
+msgid "HUD_RELIC_IN"
+msgstr "Relique dans %s"
+
+msgid "HUD_RELIC_ACTIVE"
+msgstr "La relique est sur l'autel : reste immobile dessus pour la canaliser"
+
+msgid "HUD_CHANNELING"
+msgstr "Canalisation…"
+
+msgid "HUD_VICTORY"
+msgstr "Victoire"
+
+msgid "HUD_DEFEAT"
+msgstr "Défaite"
+
+msgid "HUD_NEXT_MATCH"
+msgstr "Une nouvelle partie commence dans quelques instants"
+
+msgid "FEED_FALLEN"
+msgstr "%s est tombé"
+
+msgid "FEED_TEMPLE"
+msgstr "Un temple de l'équipe %s est tombé"
+
+msgid "FEED_CORE"
+msgstr "Le sanctuaire de l'équipe %s est tombé"
+
+msgid "FEED_RELIC_SPAWN"
+msgstr "La relique est apparue sur l'autel"
+
+msgid "FEED_RELIC"
+msgstr "L'équipe %s libère l'onde de la relique"
+
+msgid "FEED_CAMP"
+msgstr "L'équipe %s recrute des mercenaires"
+
+msgid "FEED_LEVEL"
+msgstr "Ton équipe passe au niveau %d"

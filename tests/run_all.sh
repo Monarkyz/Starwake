@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Lance tous les tests : simulation seule, puis partie réelle entre un serveur et deux clients.
+# Lance tous les tests : règles du jeu, partie complète entre bots en accéléré, puis partie
+# réelle en réseau entre un serveur et deux clients.
 # Usage : tests/run_all.sh        (variable GODOT pour choisir l'exécutable, "godot" par défaut)
 set -u
 
@@ -20,13 +21,21 @@ if grep -Eq "SCRIPT ERROR|Parse Error|FAIL:" "$LOGS/sim.log"; then
 	status=1
 fi
 
+echo "== Partie complète entre bots, en accéléré =="
+if ! "$GODOT" --headless --path . -s tests/test_match.gd 2>&1 | tee "$LOGS/match.log"; then
+	status=1
+fi
+if grep -Eq "SCRIPT ERROR|Parse Error|FAIL:" "$LOGS/match.log"; then
+	status=1
+fi
+
 echo "== Partie en réseau : un serveur, deux clients en pilote automatique =="
-"$GODOT" --headless --path . -- --server --port="$PORT" --exit-after-kills=1 --quit-after=90 >"$LOGS/server.log" 2>&1 &
+"$GODOT" --headless --path . -- --server --port="$PORT" --exit-after-events=1 --quit-after=170 >"$LOGS/server.log" 2>&1 &
 server_pid=$!
 sleep 2
-"$GODOT" --headless --path . -- --connect=127.0.0.1:"$PORT" --name=Alpha --autopilot --quit-after=80 >"$LOGS/alpha.log" 2>&1 &
+"$GODOT" --headless --path . -- --connect=127.0.0.1:"$PORT" --name=Alpha --autopilot --quit-after=160 >"$LOGS/alpha.log" 2>&1 &
 alpha_pid=$!
-"$GODOT" --headless --path . -- --connect=127.0.0.1:"$PORT" --name=Beta --autopilot --quit-after=80 >"$LOGS/beta.log" 2>&1 &
+"$GODOT" --headless --path . -- --connect=127.0.0.1:"$PORT" --name=Beta --autopilot --quit-after=160 >"$LOGS/beta.log" 2>&1 &
 beta_pid=$!
 
 wait "$alpha_pid"; alpha_code=$?
@@ -38,11 +47,12 @@ for name in server alpha beta; do
 	cat "$LOGS/$name.log"
 done
 
-# Le serveur s'arrête dès la première élimination ; les clients voient alors la connexion
-# se fermer et sortent avec le code 1, ce qui est attendu. Leur bon fonctionnement se
-# vérifie dans les journaux : accueil par le serveur, états reçus, écart de prédiction.
-[ "$server_code" -eq 0 ] || { echo "ÉCHEC : le serveur n'a enregistré aucune élimination (code $server_code)"; status=1; }
-grep -q "kill killer=" "$LOGS/server.log" || { echo "ÉCHEC : aucune élimination dans le journal du serveur"; status=1; }
+# Le serveur s'arrête au premier événement de jeu (élimination, relique ou camp pris,
+# temple détruit) ; les clients voient alors la connexion se fermer et sortent avec le
+# code 1, ce qui est attendu. Leur bon fonctionnement se vérifie dans les journaux :
+# accueil par le serveur, états reçus, sbires vus, écart de prédiction.
+[ "$server_code" -eq 0 ] || { echo "ÉCHEC : le serveur n'a enregistré aucun événement de jeu (code $server_code)"; status=1; }
+grep -Eq "kill killer=|relic captured|camp captured|structure destroyed" "$LOGS/server.log" || { echo "ÉCHEC : aucun événement de jeu dans le journal du serveur"; status=1; }
 grep -q "join name=Alpha" "$LOGS/server.log" || { echo "ÉCHEC : Alpha n'a pas rejoint"; status=1; }
 grep -q "join name=Beta" "$LOGS/server.log" || { echo "ÉCHEC : Beta n'a pas rejoint"; status=1; }
 grep -q "joined hero_id=" "$LOGS/alpha.log" || { echo "ÉCHEC : Alpha n'a pas été accueilli"; status=1; }
@@ -50,7 +60,9 @@ grep -q "joined hero_id=" "$LOGS/beta.log" || { echo "ÉCHEC : Beta n'a pas ét�
 for name in alpha beta; do
 	snapshots="$(sed -n 's/.*snapshots=\([0-9]*\).*/\1/p' "$LOGS/$name.log" | tail -1)"
 	worst="$(sed -n 's/.*max_correction=\([0-9.]*\).*/\1/p' "$LOGS/$name.log" | tail -1)"
+	seen="$(sed -n 's/.*max_units=\([0-9]*\).*/\1/p' "$LOGS/$name.log" | tail -1)"
 	[ "${snapshots:-0}" -ge 30 ] || { echo "ÉCHEC : $name a reçu trop peu d'états du serveur (${snapshots:-0})"; status=1; }
+	[ "${seen:-0}" -ge 8 ] || { echo "ÉCHEC : $name n'a pas vu les sbires (${seen:-0})"; status=1; }
 	# Sur la même machine, la prédiction du client ne doit presque jamais s'écarter du serveur.
 	awk -v w="${worst:-99}" 'BEGIN { exit !(w < 1.5) }' || { echo "ÉCHEC : $name a subi une correction de ${worst:-?} unités"; status=1; }
 done

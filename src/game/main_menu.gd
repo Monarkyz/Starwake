@@ -61,6 +61,10 @@ func _ready() -> void:
 	_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(_status)
 
+	var goal := _label("MENU_GOAL", 13, Palette.TEXT)
+	goal.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	box.add_child(goal)
+
 	var controls := _label("MENU_CONTROLS", 13, Palette.TEXT_DIM)
 	controls.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(controls)

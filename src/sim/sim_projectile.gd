@@ -14,30 +14,31 @@ var damage: float = 0.0
 var range_left: float = 0.0
 ## Un projectile perforant traverse les héros et touche chacun une seule fois.
 var pierce: bool = false
+## Cibles déjà touchées : type de cible * SimWorld.TARGET_KEY + identifiant.
 var hit_ids: Array[int] = []
 
 
 ## Taille d'un projectile dans une photographie, en octets.
-const WIRE_SIZE := 26
+const WIRE_SIZE := 13
 
 
 func write(buf: StreamPeerBuffer) -> void:
-	buf.put_u32(id)
+	buf.put_u16(id)
 	buf.put_u8(kind)
-	buf.put_u8(team)
-	buf.put_float(pos.x)
-	buf.put_float(pos.y)
-	buf.put_float(vel.x)
-	buf.put_float(vel.y)
-	buf.put_float(radius)
+	buf.put_u8(team & 1)
+	buf.put_16(SimConst.quantize(pos.x))
+	buf.put_16(SimConst.quantize(pos.y))
+	buf.put_16(SimConst.quantize(vel.x))
+	buf.put_16(SimConst.quantize(vel.y))
+	buf.put_u8(clampi(roundi(radius * 100.0), 0, 255))
 
 
 static func read(buf: StreamPeerBuffer) -> SimProjectile:
 	var p := SimProjectile.new()
-	p.id = buf.get_u32()
+	p.id = buf.get_u16()
 	p.kind = buf.get_u8()
 	p.team = buf.get_u8() & 1
-	p.pos = Vector2(buf.get_float(), buf.get_float())
-	p.vel = Vector2(buf.get_float(), buf.get_float())
-	p.radius = buf.get_float()
+	p.pos = Vector2(buf.get_16(), buf.get_16()) / 100.0
+	p.vel = Vector2(buf.get_16(), buf.get_16()) / 100.0
+	p.radius = buf.get_u8() / 100.0
 	return p

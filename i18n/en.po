@@ -7,7 +7,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 
 msgid "MENU_SUBTITLE"
-msgstr "Prototype — milestone 1: the online foundation"
+msgstr "Prototype — milestone 2: the sanctuary"
 
 msgid "MENU_NAME_PLACEHOLDER"
 msgstr "Your name"
@@ -86,3 +86,48 @@ msgstr "Esc: back to menu"
 
 msgid "FEED_KILL"
 msgstr "%s defeated %s"
+
+msgid "MENU_GOAL"
+msgstr "Destroy the enemy temples one after another, then their sanctuary. Stay close to minion fights to level up your team. Channel the relic in the centre and defeat the mercenary camps to gain the upper hand."
+
+msgid "HUD_LEVEL"
+msgstr "Lv. %d"
+
+msgid "HUD_RELIC_IN"
+msgstr "Relic in %s"
+
+msgid "HUD_RELIC_ACTIVE"
+msgstr "The relic is on the altar: stand still on it to channel"
+
+msgid "HUD_CHANNELING"
+msgstr "Channeling…"
+
+msgid "HUD_VICTORY"
+msgstr "Victory"
+
+msgid "HUD_DEFEAT"
+msgstr "Defeat"
+
+msgid "HUD_NEXT_MATCH"
+msgstr "A new match starts in a few moments"
+
+msgid "FEED_FALLEN"
+msgstr "%s has fallen"
+
+msgid "FEED_TEMPLE"
+msgstr "A temple of team %s has fallen"
+
+msgid "FEED_CORE"
+msgstr "The sanctuary of team %s has fallen"
+
+msgid "FEED_RELIC_SPAWN"
+msgstr "The relic has appeared on the altar"
+
+msgid "FEED_RELIC"
+msgstr "Team %s unleashes the relic's wave"
+
+msgid "FEED_CAMP"
+msgstr "Team %s recruits mercenaries"
+
+msgid "FEED_LEVEL"
+msgstr "Your team reaches level %d"

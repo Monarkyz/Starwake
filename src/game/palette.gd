@@ -4,6 +4,8 @@ class_name Palette
 const NIGHT := Color("0b1024")
 const GROUND := Color("1b2440")
 const GROUND_LINE := Color("33416e")
+const LANE := Color("27325a")
+const ALTAR := Color("c9cfe8")
 const STONE := Color("7c86ad")
 const BRONZE := Color("b0703c")
 const SKIN := Color("e8c39e")

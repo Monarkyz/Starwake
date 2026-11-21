@@ -14,14 +14,18 @@ const BOT_NAMES: Array[String] = ["Orion", "Véga", "Altaïr", "Sirius", "Rigel"
 
 var world: SimWorld
 var net: NetBridge
-## Si non nul, le processus s'arrête après ce nombre d'éliminations (tests automatiques).
-var exit_after_kills: int = 0
+## Si non nul, le processus s'arrête après ce nombre d'événements de jeu : élimination,
+## relique ou camp pris, bâtiment détruit (tests automatiques).
+var exit_after_events: int = 0
+## Événements de jeu comptés depuis le démarrage.
+var event_count: int = 0
 
 var _peer: ENetMultiplayerPeer
 var _players: Dictionary = {}  # peer_id -> {hero_id, queue, last, last_seq}
 var _bots: Array = []  # [{hero_id, brain}]
 var _roster: Dictionary = {}  # hero_id -> [nom, équipe, est_un_bot]
 var _mp_path: NodePath
+var _restart_left: float = 0.0
 
 
 func _enter_tree() -> void:
@@ -60,10 +64,6 @@ func start(port: int, bot_count: int = 0) -> Error:
 	return OK
 
 
-func total_kills() -> int:
-	return world.team_kills[0] + world.team_kills[1] if world != null else 0
-
-
 func _physics_process(_delta: float) -> void:
 	if world == null:
 		return
@@ -78,7 +78,7 @@ func _physics_process(_delta: float) -> void:
 		var hero: SimHero = world.heroes.get(bot["hero_id"])
 		if hero != null:
 			var brain: BotBrain = bot["brain"]
-			inputs[hero.id] = brain.think(hero, world.heroes.values(), world.arena)
+			inputs[hero.id] = brain.think(hero, world)
 
 	world.step(inputs)
 
@@ -87,24 +87,55 @@ func _physics_process(_delta: float) -> void:
 		net.s2c_snapshot.rpc_id(peer_id, snapshot)
 
 	if not world.events.is_empty():
-		var rows: Array = []
-		for ev: Dictionary in world.events:
-			rows.append([ev["type"], ev["killer"], ev["victim"]])
-			print("[server] kill killer=%s victim=%s score=%d-%d" % [
-				_hero_name(ev["killer"]), _hero_name(ev["victim"]),
-				world.team_kills[0], world.team_kills[1],
-			])
+		var rows: Array = world.events.duplicate(true)
+		for ev: Array in rows:
+			_log_event(ev)
 		for peer_id in _players:
 			net.s2c_events.rpc_id(peer_id, rows)
-		if exit_after_kills > 0 and total_kills() >= exit_after_kills:
-			print("[server] kill target reached, stopping")
+		if exit_after_events > 0 and event_count >= exit_after_events:
+			print("[server] event target reached, stopping")
 			get_tree().quit(0)
+
+	# Partie terminée : laisser le temps de lire le résultat, puis en relancer une.
+	if world.match_over:
+		_restart_left -= SimConst.DT
+		if _restart_left <= 0.0:
+			print("[server] new match")
+			world.reset_match()
+	else:
+		_restart_left = SimConst.MATCH_RESTART_DELAY
+
+
+func _log_event(ev: Array) -> void:
+	match ev[0]:
+		"kill":
+			event_count += 1
+			print("[server] kill killer=%s victim=%s score=%d-%d" % [
+				_hero_name(ev[1]), _hero_name(ev[2]), world.team_kills[0], world.team_kills[1],
+			])
+		"structure":
+			event_count += 1
+			print("[server] structure destroyed index=%d by_team=%d" % [ev[1], ev[2]])
+		"relic":
+			event_count += 1
+			print("[server] relic captured team=%d" % ev[1])
+		"camp":
+			event_count += 1
+			print("[server] camp captured team=%d camp=%d" % [ev[1], ev[2]])
+		"level":
+			print("[server] level team=%d level=%d" % [ev[1], ev[2]])
+		"match_end":
+			print("[server] match end winner=%d time=%ds" % [ev[1], int(world.tick * SimConst.DT)])
 
 
 func _add_bot(index: int) -> void:
 	var team := _smaller_team()
 	var hero := world.add_hero(team)
-	_bots.append({"hero_id": hero.id, "brain": BotBrain.new()})
+	var brain := BotBrain.new()
+	# Les deux premiers bots d'une équipe tiennent chacun une voie, le troisième circule.
+	brain.lane = hero.spawn_slot % 2
+	brain.roamer = hero.spawn_slot >= 2
+	_bots.append({"hero_id": hero.id, "brain": brain})
 	_roster[hero.id] = [BOT_NAMES[index % BOT_NAMES.size()], team, true]
 
 
@@ -191,7 +222,7 @@ func _broadcast_roster() -> void:
 
 func _hero_name(hero_id: int) -> String:
 	var row: Array = _roster.get(hero_id, [])
-	return row[0] if not row.is_empty() else "?"
+	return row[0] if not row.is_empty() else "-"
 
 
 static func _clean_name(raw: String) -> String:

@@ -8,7 +8,8 @@ extends Node
 
 signal state_changed(new_state: State)
 signal roster_changed
-signal kill_happened(killer_id: int, victim_id: int)
+## Événement de jeu reçu du serveur (voir SimWorld.events).
+signal game_event(type: String, a: int, b: int)
 
 enum State { IDLE, CONNECTING, JOINING, PLAYING, FAILED, DISCONNECTED, REJECTED }
 
@@ -28,7 +29,7 @@ var roster: Dictionary = {}  # hero_id -> [nom, équipe, est_un_bot]
 var reject_reason: String = ""
 ## Objet doté de sample(client) -> SimInput : clavier/souris, tactile ou pilote automatique.
 var input_source: RefCounted
-var stats: Dictionary = {"snapshots": 0, "corrections": 0, "max_correction": 0.0}
+var stats: Dictionary = {"snapshots": 0, "corrections": 0, "max_correction": 0.0, "max_units": 0}
 
 var _peer: ENetMultiplayerPeer
 var _mp_path: NodePath
@@ -37,10 +38,15 @@ var _connect_elapsed: float = 0.0
 var _seq: int = 0
 var _pending: Array[SimInput] = []
 var _snaps: Array[SimSnapshot] = []
+## Horloge du client, en secondes de jeu. Elle suit la cadence de simulation du moteur,
+## que les tests peuvent accélérer (option --time-scale).
+var _clock: float = 0.0
 var _clock_offset: float = 0.0
 var _clock_ready: bool = false
 var _prev_pos: Vector2 = Vector2.ZERO
 var _visual_offset: Vector2 = Vector2.ZERO
+var _beams: Array = []
+var _structures_alive: Array[bool] = []
 
 
 func _enter_tree() -> void:
@@ -86,15 +92,45 @@ func latest_snapshot() -> SimSnapshot:
 	return _snaps.back() if not _snaps.is_empty() else null
 
 
-## Héros de la dernière photographie reçue, sans interpolation.
-func get_latest_heroes() -> Array:
-	var snap := latest_snapshot()
-	return snap.heroes.values() if snap != null else []
-
-
 func hero_name(hero_id: int) -> String:
 	var row: Array = roster.get(hero_id, [])
 	return row[0] if not row.is_empty() else "?"
+
+
+## Attaques instantanées reçues depuis le dernier appel : [type, départ, arrivée].
+func take_beams() -> Array:
+	var out := _beams
+	_beams = []
+	return out
+
+
+## Unités à afficher, interpolées entre deux photographies.
+func get_render_units() -> Array[SimUnit]:
+	var out: Array[SimUnit] = []
+	if _snaps.is_empty():
+		return out
+	var pair := _bracket(_render_tick())
+	var a: SimSnapshot = pair[0]
+	var b: SimSnapshot = pair[1]
+	var alpha: float = pair[2]
+	var previous: Dictionary = {}
+	for u in a.units:
+		previous[u.id] = u
+	for u in b.units:
+		var before: SimUnit = previous.get(u.id)
+		if before != null and before.kind == u.kind and before.pos.distance_to(u.pos) < SNAP_DISTANCE:
+			var shown := SimUnit.new()
+			shown.id = u.id
+			shown.kind = u.kind
+			shown.team = u.team
+			shown.hp = u.hp
+			shown.max_hp = u.max_hp
+			shown.attacked = u.attacked
+			shown.pos = before.pos.lerp(u.pos, alpha)
+			out.append(shown)
+		else:
+			out.append(u)
+	return out
 
 
 ## Position affichée du héros du joueur : prédite, lissée entre deux pas.
@@ -153,6 +189,7 @@ func get_render_projectiles() -> Array[SimProjectile]:
 
 
 func _process(delta: float) -> void:
+	_clock += delta * Engine.physics_ticks_per_second / float(SimConst.TICK_RATE)
 	_visual_offset *= exp(-12.0 * delta)
 	if state == State.CONNECTING or state == State.JOINING:
 		_connect_elapsed += delta
@@ -212,12 +249,12 @@ func _on_roster(new_roster: Dictionary) -> void:
 
 func _on_events(events: Array) -> void:
 	for ev: Variant in events:
-		if typeof(ev) == TYPE_ARRAY and ev.size() == 3 and ev[0] == "kill":
-			kill_happened.emit(int(ev[1]), int(ev[2]))
+		if typeof(ev) == TYPE_ARRAY and ev.size() == 3 and typeof(ev[0]) == TYPE_STRING:
+			game_event.emit(ev[0], int(ev[1]), int(ev[2]))
 
 
 func _on_snapshot(data: PackedByteArray) -> void:
-	var snap := SimSnapshot.from_bytes(data)
+	var snap := SimSnapshot.from_bytes(data, arena)
 	if snap == null:
 		return
 	if not _snaps.is_empty() and snap.tick <= _snaps.back().tick:
@@ -226,7 +263,19 @@ func _on_snapshot(data: PackedByteArray) -> void:
 	if _snaps.size() > 40:
 		_snaps.pop_front()
 	stats["snapshots"] += 1
+	stats["max_units"] = maxi(stats["max_units"], snap.units.size())
 	_update_clock(snap.tick)
+	_beams.append_array(snap.beams)
+	if _beams.size() > 64:
+		_beams = _beams.slice(_beams.size() - 64)
+
+	# Les bâtiments debout bloquent le passage : la prédiction doit le savoir.
+	var alive: Array[bool] = []
+	for s in snap.structures:
+		alive.append(s.alive)
+	if alive != _structures_alive:
+		_structures_alive = alive
+		arena.set_structures_alive(alive)
 
 	var mine: SimHero = snap.heroes.get(my_hero_id)
 	if mine == null:
@@ -239,6 +288,7 @@ func _on_snapshot(data: PackedByteArray) -> void:
 	# Réconciliation : repartir de l'état du serveur, puis rejouer les commandes
 	# qu'il n'a pas encore prises en compte.
 	var before := local.pos
+	var same_life := local.alive and mine.alive
 	local = mine.copy()
 	while not _pending.is_empty() and _pending[0].seq <= mine.last_seq:
 		_pending.pop_front()
@@ -247,7 +297,8 @@ func _on_snapshot(data: PackedByteArray) -> void:
 
 	var correction := local.pos - before
 	var error := correction.length()
-	if error > 0.05:
+	# Une mort ou une réapparition déplace le héros : ce n'est pas une erreur de prédiction.
+	if error > 0.05 and same_life:
 		stats["corrections"] += 1
 		stats["max_correction"] = maxf(stats["max_correction"], error)
 	if error > SNAP_DISTANCE:
@@ -260,7 +311,7 @@ func _on_snapshot(data: PackedByteArray) -> void:
 
 
 func _update_clock(snap_tick: int) -> void:
-	var sample := _now() - snap_tick * SimConst.DT
+	var sample := _clock - snap_tick * SimConst.DT
 	if not _clock_ready or absf(sample - _clock_offset) > 0.5:
 		_clock_offset = sample
 		_clock_ready = true
@@ -269,7 +320,7 @@ func _update_clock(snap_tick: int) -> void:
 
 
 func _render_tick() -> float:
-	return (_now() - _clock_offset) / SimConst.DT - INTERP_TICKS
+	return (_clock - _clock_offset) / SimConst.DT - INTERP_TICKS
 
 
 ## Renvoie [photographie avant, photographie après, fraction] pour l'instant demandé.
@@ -293,6 +344,3 @@ func _set_state(new_state: State) -> void:
 	state = new_state
 	state_changed.emit(new_state)
 
-
-static func _now() -> float:
-	return Time.get_ticks_usec() / 1000000.0

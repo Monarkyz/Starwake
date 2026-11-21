@@ -1,21 +1,37 @@
 class_name GameView
 extends Node3D
-## Affichage 3D de la partie : terrain, héros, projectiles, caméra et interface.
+## Affichage 3D de la partie : carte, bâtiments, héros, unités, projectiles, caméra et interface.
 ## Il ne décide de rien : il lit l'état fourni par le client et le dessine.
 ## Le plan de jeu (x, y) de la simulation correspond au sol (x, z) de la scène.
 
 ## Caméra lointaine à champ étroit : peu de déformation sur les bords, comme dans les jeux du genre.
 const CAMERA_OFFSET := Vector3(0.0, 31.0, 18.0)
+const NEUTRAL_COLOR := Color("5fb3a8")
+## Durée d'affichage et épaisseur des traits d'attaque, par type (voir SimWorld.BEAM_*).
+const BEAM_LIFE: Array[float] = [0.14, 0.1, 0.7]
+const BEAM_WIDTH: Array[float] = [0.14, 0.06, 0.5]
 
 var client: GameClient
 var camera: Camera3D
 var hud: Hud
 
 var _hero_views: Dictionary = {}  # id -> HeroView
+var _unit_views: Dictionary = {}  # id -> MeshInstance3D
 var _projectile_views: Dictionary = {}  # id -> MeshInstance3D
+var _structure_views: Array[StructureView] = []
+var _relic_orb: MeshInstance3D
+var _beams: Array = []  # [{node, left}]
 var _focus: Vector3 = Vector3.ZERO
+var _focus_ready: bool = false
+var _time: float = 0.0
+
 var _projectile_meshes: Array[SphereMesh] = []
 var _projectile_materials: Array[StandardMaterial3D] = []
+var _unit_meshes: Array[Mesh] = []
+var _unit_heights: Array[float] = []
+var _unit_materials: Array[StandardMaterial3D] = []
+var _beam_mesh: BoxMesh
+var _beam_materials: Array[StandardMaterial3D] = []
 
 
 func setup(p_client: GameClient) -> void:
@@ -24,8 +40,8 @@ func setup(p_client: GameClient) -> void:
 
 func _ready() -> void:
 	_build_environment()
-	_build_arena(client.arena)
-	_build_projectile_resources()
+	_build_map(client.arena)
+	_build_shared_resources()
 
 	camera = Camera3D.new()
 	camera.fov = 30.0
@@ -48,19 +64,40 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	_time += delta
 	var heroes := client.get_render_heroes()
+	var units := client.get_render_units()
 	_sync_heroes(heroes, delta)
+	_sync_units(units)
 	_sync_projectiles(client.get_render_projectiles())
+	_sync_beams(delta)
 	hud.heroes = heroes
+	hud.units = units
+
+	var snap := client.latest_snapshot()
+	if snap != null:
+		for i in mini(snap.structures.size(), _structure_views.size()):
+			_structure_views[i].apply(snap.structures[i])
+		if _relic_orb != null:
+			_relic_orb.visible = snap.relic_active
+			_relic_orb.scale = Vector3.ONE * (1.0 + 0.12 * sin(_time * 4.0))
 
 	if client.local != null:
 		var p := client.get_local_render_pos()
 		var half := client.arena.half_size
 		# La caméra s'arrête avant les bords pour ne pas montrer le vide autour du terrain.
 		var target := Vector3(clampf(p.x, -half.x + 15.0, half.x - 15.0), 0.0, clampf(p.y, -half.y + 9.0, half.y - 5.0))
-		_focus = _focus.lerp(target, 1.0 - exp(-10.0 * delta))
+		if _focus_ready:
+			_focus = _focus.lerp(target, 1.0 - exp(-10.0 * delta))
+		else:
+			_focus = target
+			_focus_ready = true
 	camera.position = _focus + CAMERA_OFFSET
 
+
+# ---------------------------------------------------------------------------
+# Entités mobiles
+# ---------------------------------------------------------------------------
 
 func _sync_heroes(heroes: Array[SimHero], delta: float) -> void:
 	var seen: Dictionary = {}
@@ -77,6 +114,26 @@ func _sync_heroes(heroes: Array[SimHero], delta: float) -> void:
 		if not seen.has(id):
 			_hero_views[id].queue_free()
 			_hero_views.erase(id)
+
+
+func _sync_units(units: Array[SimUnit]) -> void:
+	var seen: Dictionary = {}
+	for u in units:
+		seen[u.id] = true
+		var node: MeshInstance3D = _unit_views.get(u.id)
+		if node == null:
+			node = MeshInstance3D.new()
+			node.mesh = _unit_meshes[u.kind]
+			node.material_override = _unit_materials[u.team]
+			add_child(node)
+			_unit_views[u.id] = node
+		node.position = Vector3(u.pos.x, _unit_heights[u.kind] * 0.5, u.pos.y)
+		# Petit sursaut au moment où l'unité frappe.
+		node.scale = Vector3.ONE * (1.25 if u.attacked else 1.0)
+	for id: int in _unit_views.keys():
+		if not seen.has(id):
+			_unit_views[id].queue_free()
+			_unit_views.erase(id)
 
 
 func _sync_projectiles(projectiles: Array[SimProjectile]) -> void:
@@ -98,6 +155,38 @@ func _sync_projectiles(projectiles: Array[SimProjectile]) -> void:
 			_projectile_views.erase(id)
 
 
+## Traits brefs pour les attaques instantanées : tirs des temples, des archers, onde de la relique.
+func _sync_beams(delta: float) -> void:
+	for beam: Array in client.take_beams():
+		var kind: int = clampi(beam[0], 0, BEAM_LIFE.size() - 1)
+		var from: Vector2 = beam[1]
+		var to: Vector2 = beam[2]
+		if from.distance_to(to) < 0.1:
+			continue
+		var start := Vector3(from.x, 2.2 if kind != SimWorld.BEAM_ARCHER else 0.9, from.y)
+		var end := Vector3(to.x, 0.9, to.y)
+		var node := MeshInstance3D.new()
+		node.mesh = _beam_mesh
+		node.material_override = _beam_materials[kind]
+		node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(node)
+		node.look_at_from_position((start + end) * 0.5, end)
+		node.scale = Vector3(BEAM_WIDTH[kind], BEAM_WIDTH[kind], start.distance_to(end))
+		_beams.append({"node": node, "left": BEAM_LIFE[kind]})
+	var kept: Array = []
+	for entry: Dictionary in _beams:
+		entry["left"] -= delta
+		if entry["left"] > 0.0:
+			kept.append(entry)
+		else:
+			entry["node"].queue_free()
+	_beams = kept
+
+
+# ---------------------------------------------------------------------------
+# Construction de la scène
+# ---------------------------------------------------------------------------
+
 func _build_environment() -> void:
 	var env := Environment.new()
 	env.background_mode = Environment.BG_COLOR
@@ -113,11 +202,12 @@ func _build_environment() -> void:
 	sun.light_color = Color("fff1d6")
 	sun.light_energy = 1.1
 	sun.shadow_enabled = true
+	sun.directional_shadow_max_distance = 90.0
 	sun.rotation_degrees = Vector3(-55.0, -35.0, 0.0)
 	add_child(sun)
 
 
-func _build_arena(arena: SimArena) -> void:
+func _build_map(arena: SimArena) -> void:
 	var half := arena.half_size
 
 	var ground := PlaneMesh.new()
@@ -135,10 +225,17 @@ func _build_arena(arena: SimArena) -> void:
 	_add_static(short_side, border_material, Vector3(-half.x - 0.25, 0.3, 0.0))
 	_add_static(short_side, border_material, Vector3(half.x + 0.25, 0.3, 0.0))
 
-	# Ligne médiane.
-	var midline := BoxMesh.new()
-	midline.size = Vector3(0.12, 0.02, half.y * 2.0)
-	_add_static(midline, _flat(Palette.GROUND_LINE), Vector3(0.0, 0.01, 0.0))
+	# Voies : une bande claire le long de chaque tronçon.
+	var lane_material := _flat(Palette.LANE)
+	for lane: Array in arena.lanes:
+		for i in lane.size() - 1:
+			var a: Vector2 = lane[i]
+			var b: Vector2 = lane[i + 1]
+			var strip := BoxMesh.new()
+			strip.size = Vector3(a.distance_to(b) + 4.0, 0.02, 5.0)
+			var node := _add_static(strip, lane_material, Vector3((a.x + b.x) * 0.5, 0.01, (a.y + b.y) * 0.5))
+			node.rotation.y = -(b - a).angle()
+			node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
 	var stone := _flat(Palette.STONE)
 	for pillar in arena.pillars:
@@ -155,9 +252,23 @@ func _build_arena(arena: SimArena) -> void:
 		cap.radial_segments = 10
 		_add_static(cap, stone, Vector3(pillar.x, 1.95, pillar.y))
 
-	# Dalles d'apparition, à la couleur de chaque équipe.
+	for def in arena.structures:
+		var view := StructureView.new()
+		add_child(view)
+		view.setup(def)
+		_structure_views.append(view)
+
+	# Fontaines de soin et dalles d'apparition, à la couleur de chaque équipe.
 	for team in 2:
-		var pad_material := _flat(Palette.TEAM_COLORS[team].darkened(0.45))
+		var color: Color = Palette.TEAM_COLORS[team]
+		if team < arena.fountains.size():
+			var pool := CylinderMesh.new()
+			pool.top_radius = SimConst.FOUNTAIN_RADIUS
+			pool.bottom_radius = SimConst.FOUNTAIN_RADIUS
+			pool.height = 0.04
+			pool.radial_segments = 32
+			var center: Vector2 = arena.fountains[team]
+			_add_static(pool, _flat(color.darkened(0.7)), Vector3(center.x, 0.02, center.y)).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		var points: Array = arena.spawns[team]
 		for point: Vector2 in points:
 			var pad := CylinderMesh.new()
@@ -165,10 +276,41 @@ func _build_arena(arena: SimArena) -> void:
 			pad.bottom_radius = 1.1
 			pad.height = 0.06
 			pad.radial_segments = 16
-			_add_static(pad, pad_material, Vector3(point.x, 0.03, point.y))
+			_add_static(pad, _flat(color.darkened(0.45)), Vector3(point.x, 0.05, point.y))
+
+	# Camps de mercenaires : un cercle au sol.
+	for camp in arena.camps:
+		var center: Vector2 = camp["pos"]
+		var ring := TorusMesh.new()
+		ring.inner_radius = 3.0
+		ring.outer_radius = 3.2
+		ring.rings = 32
+		ring.ring_segments = 4
+		var node := _add_static(ring, _flat(NEUTRAL_COLOR.darkened(0.3)), Vector3(center.x, 0.03, center.y))
+		node.scale = Vector3(1.0, 0.15, 1.0)
+
+	if arena.has_altar:
+		var dais := CylinderMesh.new()
+		dais.top_radius = arena.altar_radius
+		dais.bottom_radius = arena.altar_radius + 0.3
+		dais.height = 0.12
+		dais.radial_segments = 24
+		_add_static(dais, _flat(Palette.ALTAR), Vector3(arena.altar.x, 0.06, arena.altar.y))
+		var glow := StandardMaterial3D.new()
+		glow.albedo_color = Color.WHITE
+		glow.emission_enabled = true
+		glow.emission = Color("fff4d6")
+		glow.emission_energy_multiplier = 2.5
+		var orb := SphereMesh.new()
+		orb.radius = 0.7
+		orb.height = 1.4
+		orb.radial_segments = 12
+		orb.rings = 6
+		_relic_orb = _add_static(orb, glow, Vector3(arena.altar.x, 1.7, arena.altar.y))
+		_relic_orb.visible = false
 
 
-func _build_projectile_resources() -> void:
+func _build_shared_resources() -> void:
 	for radius: float in [0.22, 0.38]:
 		var mesh := SphereMesh.new()
 		mesh.radius = radius
@@ -182,13 +324,37 @@ func _build_projectile_resources() -> void:
 		material.albedo_color = Palette.TEAM_COLORS[team].lightened(0.45)
 		_projectile_materials.append(material)
 
+	# Unités, dans l'ordre de UnitDefs.DEFS : fantassin, archer, gardien.
+	var footman := BoxMesh.new()
+	footman.size = Vector3(0.6, 0.85, 0.6)
+	var archer := CylinderMesh.new()
+	archer.top_radius = 0.12
+	archer.bottom_radius = 0.32
+	archer.height = 1.05
+	archer.radial_segments = 6
+	var guardian := BoxMesh.new()
+	guardian.size = Vector3(1.25, 1.6, 1.25)
+	_unit_meshes = [footman, archer, guardian]
+	_unit_heights = [0.85, 1.05, 1.6]
+	for color: Color in [Palette.TEAM_COLORS[0], Palette.TEAM_COLORS[1], NEUTRAL_COLOR]:
+		_unit_materials.append(_flat(color.darkened(0.15)))
 
-func _add_static(mesh: Mesh, material: Material, at: Vector3) -> void:
+	_beam_mesh = BoxMesh.new()
+	_beam_mesh.size = Vector3.ONE
+	for color: Color in [Color("ffe9b0"), Color("d8dcff"), Color.WHITE]:
+		var material := StandardMaterial3D.new()
+		material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		material.albedo_color = color
+		_beam_materials.append(material)
+
+
+func _add_static(mesh: Mesh, material: Material, at: Vector3) -> MeshInstance3D:
 	var node := MeshInstance3D.new()
 	node.mesh = mesh
 	node.material_override = material
 	node.position = at
 	add_child(node)
+	return node
 
 
 func _flat(color: Color) -> StandardMaterial3D:
