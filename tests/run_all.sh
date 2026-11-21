@@ -64,7 +64,7 @@ if grep -Eq "SCRIPT ERROR|Parse Error|FAIL:" "$LOGS/match.log"; then
 fi
 
 echo "== Partie en réseau : un serveur complété par des bots, un client clavier-souris et un client tactile =="
-"$GODOT" --headless --path . -- --server --port="$PORT" --fill --exit-after-events=1 --quit-after=250 >"$LOGS/server.log" 2>&1 &
+"$GODOT" --headless --path . -- --server --port="$PORT" --fill --exit-after-events=3 --quit-after=250 >"$LOGS/server.log" 2>&1 &
 server_pid=$!
 sleep 2
 "$GODOT" --headless --path . -- --connect=127.0.0.1:"$PORT" --name=Alpha --hero=scutum --autopilot --quit-after=240 >"$LOGS/alpha.log" 2>&1 &
@@ -81,8 +81,8 @@ for name in server alpha beta; do
 	cat "$LOGS/$name.log"
 done
 
-# Le serveur s'arrête au premier événement de jeu (élimination, relique ou camp pris,
-# temple détruit) ; les clients voient alors la connexion se fermer et sortent avec le
+# Le serveur s'arrête au troisième événement de jeu (élimination, relique ou camp pris,
+# temple détruit) : assez tard pour que chaque joueur ait eu le temps de combattre ; les clients voient alors la connexion se fermer et sortent avec le
 # code 1, ce qui est attendu. Leur bon fonctionnement se vérifie dans les journaux :
 # accueil par le serveur, états reçus, sbires vus, écart de prédiction.
 [ "$server_code" -eq 0 ] || { echo "ÉCHEC : le serveur n'a enregistré aucun événement de jeu (code $server_code)"; status=1; }
