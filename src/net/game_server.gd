@@ -82,15 +82,16 @@ func _physics_process(_delta: float) -> void:
 
 	world.step(inputs)
 
+	var peers := _connected_peers()
 	var snapshot := world.to_snapshot()
-	for peer_id in _players:
+	for peer_id in peers:
 		net.s2c_snapshot.rpc_id(peer_id, snapshot)
 
 	if not world.events.is_empty():
 		var rows: Array = world.events.duplicate(true)
 		for ev: Array in rows:
 			_log_event(ev)
-		for peer_id in _players:
+		for peer_id in peers:
 			net.s2c_events.rpc_id(peer_id, rows)
 		if exit_after_events > 0 and event_count >= exit_after_events:
 			print("[server] event target reached, stopping")
@@ -213,11 +214,18 @@ func _disconnect(peer_id: int) -> void:
 
 
 func _broadcast_roster() -> void:
+	for peer_id in _connected_peers():
+		net.s2c_roster.rpc_id(peer_id, _roster)
+
+
+## Joueurs à qui l'on peut encore écrire : un pair en cours de déconnexion ne reçoit plus rien.
+func _connected_peers() -> Array[int]:
+	var out: Array[int] = []
 	for peer_id: int in _players:
-		# Un pair en cours de déconnexion ne peut plus recevoir de message.
 		var packet_peer := _peer.get_peer(peer_id)
 		if packet_peer != null and packet_peer.get_state() == ENetPacketPeer.STATE_CONNECTED:
-			net.s2c_roster.rpc_id(peer_id, _roster)
+			out.append(peer_id)
+	return out
 
 
 func _hero_name(hero_id: int) -> String:

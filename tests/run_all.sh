@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Lance tous les tests : règles du jeu, partie complète entre bots en accéléré, puis partie
-# réelle en réseau entre un serveur et deux clients.
+# réelle en réseau à 3 contre 3 entre un serveur, ses bots et deux clients.
 # Usage : tests/run_all.sh        (variable GODOT pour choisir l'exécutable, "godot" par défaut)
 set -u
 
@@ -29,13 +29,13 @@ if grep -Eq "SCRIPT ERROR|Parse Error|FAIL:" "$LOGS/match.log"; then
 	status=1
 fi
 
-echo "== Partie en réseau : un serveur, deux clients en pilote automatique =="
-"$GODOT" --headless --path . -- --server --port="$PORT" --exit-after-events=1 --quit-after=170 >"$LOGS/server.log" 2>&1 &
+echo "== Partie en réseau : un serveur avec quatre bots, deux clients en pilote automatique =="
+"$GODOT" --headless --path . -- --server --port="$PORT" --bots=4 --exit-after-events=1 --quit-after=250 >"$LOGS/server.log" 2>&1 &
 server_pid=$!
 sleep 2
-"$GODOT" --headless --path . -- --connect=127.0.0.1:"$PORT" --name=Alpha --autopilot --quit-after=160 >"$LOGS/alpha.log" 2>&1 &
+"$GODOT" --headless --path . -- --connect=127.0.0.1:"$PORT" --name=Alpha --autopilot --quit-after=240 >"$LOGS/alpha.log" 2>&1 &
 alpha_pid=$!
-"$GODOT" --headless --path . -- --connect=127.0.0.1:"$PORT" --name=Beta --autopilot --quit-after=160 >"$LOGS/beta.log" 2>&1 &
+"$GODOT" --headless --path . -- --connect=127.0.0.1:"$PORT" --name=Beta --autopilot --quit-after=240 >"$LOGS/beta.log" 2>&1 &
 beta_pid=$!
 
 wait "$alpha_pid"; alpha_code=$?

@@ -11,4 +11,6 @@ func sample(client: GameClient) -> SimInput:
 	if snap == null:
 		return SimInput.new()
 	_brain.lane = client.my_hero_id % 2
+	# Aller chercher la relique d'où qu'il soit : les tests comptent sur cet événement.
+	_brain.roamer = true
 	return _brain.think(client.local, snap)

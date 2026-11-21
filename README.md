@@ -68,7 +68,7 @@ Le script lance trois séries de tests :
 
 1. les règles du jeu, une par une (déplacements, tirs, sbires, temples, relique, camps, expérience, format réseau) ;
 2. deux parties complètes entre six bots, simulées en accéléré, qui doivent se terminer par la chute d'un sanctuaire en 5 à 25 minutes de jeu ;
-3. une vraie partie en réseau : un serveur et deux clients en pilote automatique, qui doivent se rejoindre, voir les sbires et provoquer un premier événement de jeu.
+3. une vraie partie en réseau à 3 contre 3 : un serveur, quatre bots et deux clients en pilote automatique, qui doivent se rejoindre, voir les sbires et provoquer un premier événement de jeu.
 
 Si Godot n'est pas dans le `PATH`, indiquer son chemin : `GODOT=/chemin/vers/godot tests/run_all.sh`.
 
