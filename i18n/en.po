@@ -1,0 +1,88 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: Starwake\n"
+"Language: en\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "MENU_SUBTITLE"
+msgstr "Prototype — milestone 1: the online foundation"
+
+msgid "MENU_NAME_PLACEHOLDER"
+msgstr "Your name"
+
+msgid "MENU_ADDRESS_PLACEHOLDER"
+msgstr "Server address (host:port)"
+
+msgid "MENU_TRAINING"
+msgstr "Local training"
+
+msgid "MENU_JOIN"
+msgstr "Join a server"
+
+msgid "MENU_QUIT"
+msgstr "Quit"
+
+msgid "MENU_CONTROLS"
+msgstr "WASD: move · Mouse: aim · Left click: attack · Right click: Sidereal Bolt · Space: Comet Step · Esc: menu"
+
+msgid "DEFAULT_PLAYER_NAME"
+msgstr "Player"
+
+msgid "STATUS_CONNECTING"
+msgstr "Connecting to %s…"
+
+msgid "STATUS_FAILED"
+msgstr "Could not connect: the server is not responding."
+
+msgid "STATUS_DISCONNECTED"
+msgstr "The connection to the server was lost."
+
+msgid "STATUS_REJECT_FULL"
+msgstr "The match is full."
+
+msgid "STATUS_REJECT_VERSION"
+msgstr "Your game version does not match the server's."
+
+msgid "STATUS_SERVER_ERROR"
+msgstr "Could not start the local server."
+
+msgid "TEAM_DAWN"
+msgstr "Dawn"
+
+msgid "TEAM_DUSK"
+msgstr "Dusk"
+
+msgid "HERO_SAGITTA"
+msgstr "Theron of the Arrow"
+
+msgid "ABILITY_SAGITTA_ATTACK"
+msgstr "Star Shot"
+
+msgid "ABILITY_SAGITTA_BOLT"
+msgstr "Sidereal Bolt"
+
+msgid "ABILITY_SAGITTA_STEP"
+msgstr "Comet Step"
+
+msgid "KEY_ATTACK"
+msgstr "Left click"
+
+msgid "KEY_ABILITY_1"
+msgstr "Right click"
+
+msgid "KEY_ABILITY_2"
+msgstr "Space"
+
+msgid "HUD_WAITING"
+msgstr "Waiting for the server…"
+
+msgid "HUD_RESPAWN_IN"
+msgstr "Back in the fight in %d s"
+
+msgid "HUD_LEAVE_HINT"
+msgstr "Esc: back to menu"
+
+msgid "FEED_KILL"
+msgstr "%s defeated %s"

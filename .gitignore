@@ -1,0 +1,15 @@
+# Cache et fichiers importés par Godot (régénérés à l'ouverture du projet)
+.godot/
+*.translation
+
+# Exports
+/build/
+/export/
+*.pck
+*.apk
+*.aab
+*.ipa
+
+# Système
+.DS_Store
+Thumbs.db

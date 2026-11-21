@@ -1,0 +1,88 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: Starwake\n"
+"Language: fr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "MENU_SUBTITLE"
+msgstr "Prototype — jalon 1 : le socle en ligne"
+
+msgid "MENU_NAME_PLACEHOLDER"
+msgstr "Ton nom"
+
+msgid "MENU_ADDRESS_PLACEHOLDER"
+msgstr "Adresse du serveur (hôte:port)"
+
+msgid "MENU_TRAINING"
+msgstr "Entraînement local"
+
+msgid "MENU_JOIN"
+msgstr "Rejoindre un serveur"
+
+msgid "MENU_QUIT"
+msgstr "Quitter"
+
+msgid "MENU_CONTROLS"
+msgstr "ZQSD : se déplacer · Souris : viser · Clic gauche : attaquer · Clic droit : Trait sidéral · Espace : Pas de comète · Échap : menu"
+
+msgid "DEFAULT_PLAYER_NAME"
+msgstr "Joueur"
+
+msgid "STATUS_CONNECTING"
+msgstr "Connexion à %s…"
+
+msgid "STATUS_FAILED"
+msgstr "Connexion impossible : le serveur ne répond pas."
+
+msgid "STATUS_DISCONNECTED"
+msgstr "La connexion au serveur a été perdue."
+
+msgid "STATUS_REJECT_FULL"
+msgstr "La partie est complète."
+
+msgid "STATUS_REJECT_VERSION"
+msgstr "Ta version du jeu ne correspond pas à celle du serveur."
+
+msgid "STATUS_SERVER_ERROR"
+msgstr "Impossible de démarrer le serveur local."
+
+msgid "TEAM_DAWN"
+msgstr "Aube"
+
+msgid "TEAM_DUSK"
+msgstr "Crépuscule"
+
+msgid "HERO_SAGITTA"
+msgstr "Théron de la Flèche"
+
+msgid "ABILITY_SAGITTA_ATTACK"
+msgstr "Tir d'étoile"
+
+msgid "ABILITY_SAGITTA_BOLT"
+msgstr "Trait sidéral"
+
+msgid "ABILITY_SAGITTA_STEP"
+msgstr "Pas de comète"
+
+msgid "KEY_ATTACK"
+msgstr "Clic gauche"
+
+msgid "KEY_ABILITY_1"
+msgstr "Clic droit"
+
+msgid "KEY_ABILITY_2"
+msgstr "Espace"
+
+msgid "HUD_WAITING"
+msgstr "En attente du serveur…"
+
+msgid "HUD_RESPAWN_IN"
+msgstr "Retour au combat dans %d s"
+
+msgid "HUD_LEAVE_HINT"
+msgstr "Échap : retour au menu"
+
+msgid "FEED_KILL"
+msgstr "%s a vaincu %s"
