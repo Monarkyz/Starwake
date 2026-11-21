@@ -232,8 +232,10 @@ func _draw_ability_bar(me: SimHero) -> void:
 		draw_rect(rect, Palette.GROUND_LINE, false, 1.5)
 		draw_string(_font, Vector2(rect.position.x, rect.position.y + 22.0), tr(KEY_HINTS[slot]),
 				HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, 15, Palette.GOLD)
-		draw_string(_font, Vector2(rect.position.x + 4.0, rect.end.y - 12.0), tr(ability["name_key"]),
-				HORIZONTAL_ALIGNMENT_CENTER, rect.size.x - 8.0, 13, Palette.TEXT)
+		# Les noms longs passent en plus petit pour tenir dans la case.
+		var ability_name := tr(ability["name_key"])
+		draw_string(_font, Vector2(rect.position.x + 2.0, rect.end.y - 12.0), ability_name,
+				HORIZONTAL_ALIGNMENT_CENTER, rect.size.x - 4.0, 13 if ability_name.length() <= 15 else 11, Palette.TEXT)
 		if ability.get("awakening", false):
 			_draw_awaken_slot(me, rect)
 			continue

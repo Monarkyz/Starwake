@@ -166,6 +166,9 @@ func _sync_projectiles(projectiles: Array[SimProjectile]) -> void:
 			node = MeshInstance3D.new()
 			node.mesh = _projectile_meshes[mini(p.kind, 1)]
 			node.material_override = _projectile_materials[p.team]
+			# Un gros projectile (vague, trait large) s'affiche à sa vraie taille.
+			var mesh_radius := 0.38 if p.kind >= 1 else 0.22
+			node.scale = Vector3.ONE * maxf(p.radius / mesh_radius, 1.0)
 			node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 			add_child(node)
 			_projectile_views[p.id] = node
@@ -238,6 +241,9 @@ func _spawn_disc(kind: int, from: Vector2, to: Vector2) -> void:
 		life = 0.16
 	elif kind == SimWorld.FX_HEAL:
 		life = 0.5
+	elif kind == SimWorld.FX_WARN:
+		# L'annonce reste au sol jusqu'à l'impact.
+		life = 0.8
 	var node := MeshInstance3D.new()
 	node.mesh = _disc_mesh
 	node.material_override = _disc_materials.get(kind, _disc_materials[SimWorld.FX_RING])
@@ -410,7 +416,7 @@ func _build_shared_resources() -> void:
 	_disc_mesh.bottom_radius = 1.0
 	_disc_mesh.height = 0.05
 	_disc_mesh.radial_segments = 32
-	for entry: Array in [[SimWorld.FX_SLASH, Color(1.0, 0.95, 0.8, 0.45)], [SimWorld.FX_RING, Color(1.0, 0.85, 0.5, 0.4)], [SimWorld.FX_HEAL, Color(0.55, 1.0, 0.7, 0.4)]]:
+	for entry: Array in [[SimWorld.FX_SLASH, Color(1.0, 0.95, 0.8, 0.45)], [SimWorld.FX_RING, Color(1.0, 0.85, 0.5, 0.4)], [SimWorld.FX_HEAL, Color(0.55, 1.0, 0.7, 0.4)], [SimWorld.FX_WARN, Color(1.0, 0.35, 0.3, 0.3)]]:
 		var disc_material := StandardMaterial3D.new()
 		disc_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 		disc_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA

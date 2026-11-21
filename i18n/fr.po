@@ -7,7 +7,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 
 msgid "MENU_SUBTITLE"
-msgstr "Prototype — jalon 4 : PC et mobile"
+msgstr "Prototype — jalon 5 : douze héros"
 
 msgid "MENU_NAME_PLACEHOLDER"
 msgstr "Ton nom"
@@ -320,3 +320,462 @@ msgstr "Menu"
 
 msgid "HUD_TALENT_TITLE_TOUCH"
 msgstr "Niveau %d : touche un talent pour le choisir"
+
+msgid "HERO_URSA"
+msgstr "Kallias de l'Ourse"
+
+msgid "ABILITY_URSA_ATTACK"
+msgstr "Griffes"
+
+msgid "ABILITY_URSA_CHARGE"
+msgstr "Charge de l'ourse"
+
+msgid "ABILITY_URSA_ROAR"
+msgstr "Rugissement"
+
+msgid "ABILITY_URSA_ULT"
+msgstr "Fureur de l'Ourse"
+
+msgid "TALENT_URSA_1A"
+msgstr "Fourrure épaisse"
+
+msgid "TALENT_URSA_1A_DESC"
+msgstr "Kallias gagne 15 % de vie maximale."
+
+msgid "TALENT_URSA_1B"
+msgstr "Griffes acérées"
+
+msgid "TALENT_URSA_1B_DESC"
+msgstr "Griffes inflige 25 % de dégâts en plus."
+
+msgid "TALENT_URSA_2A"
+msgstr "Élan"
+
+msgid "TALENT_URSA_2A_DESC"
+msgstr "Charge de l'ourse se recharge 30 % plus vite."
+
+msgid "TALENT_URSA_2B"
+msgstr "Voix de tonnerre"
+
+msgid "TALENT_URSA_2B_DESC"
+msgstr "Rugissement ralentit 50 % plus longtemps."
+
+msgid "TALENT_URSA_3A"
+msgstr "Percussion"
+
+msgid "TALENT_URSA_3A_DESC"
+msgstr "Charge de l'ourse inflige 50 % de dégâts en plus."
+
+msgid "TALENT_URSA_3B"
+msgstr "Pas lourd, pas lent"
+
+msgid "TALENT_URSA_3B_DESC"
+msgstr "Kallias se déplace 10 % plus vite."
+
+msgid "HERO_CORVUS"
+msgstr "Nyx du Corbeau"
+
+msgid "ABILITY_CORVUS_ATTACK"
+msgstr "Serres"
+
+msgid "ABILITY_CORVUS_DIVE"
+msgstr "Plongeon"
+
+msgid "ABILITY_CORVUS_NIGHT"
+msgstr "Vol de nuit"
+
+msgid "ABILITY_CORVUS_ULT"
+msgstr "Tempête de plumes"
+
+msgid "TALENT_CORVUS_1A"
+msgstr "Serres aiguisées"
+
+msgid "TALENT_CORVUS_1A_DESC"
+msgstr "Serres inflige 20 % de dégâts en plus."
+
+msgid "TALENT_CORVUS_1B"
+msgstr "Rapace"
+
+msgid "TALENT_CORVUS_1B_DESC"
+msgstr "Plongeon se recharge 25 % plus vite."
+
+msgid "TALENT_CORVUS_2A"
+msgstr "Nuit longue"
+
+msgid "TALENT_CORVUS_2A_DESC"
+msgstr "Vol de nuit dure 50 % plus longtemps."
+
+msgid "TALENT_CORVUS_2B"
+msgstr "Festin"
+
+msgid "TALENT_CORVUS_2B_DESC"
+msgstr "Serres rend 100 % de vie en plus."
+
+msgid "TALENT_CORVUS_3A"
+msgstr "Piqué mortel"
+
+msgid "TALENT_CORVUS_3A_DESC"
+msgstr "Plongeon inflige 40 % de dégâts en plus."
+
+msgid "TALENT_CORVUS_3B"
+msgstr "Plumage dense"
+
+msgid "TALENT_CORVUS_3B_DESC"
+msgstr "Nyx gagne 15 % de vie maximale."
+
+msgid "HERO_CRATER"
+msgstr "Hébé de la Coupe"
+
+msgid "ABILITY_CRATER_ATTACK"
+msgstr "Goutte d'ambroisie"
+
+msgid "ABILITY_CRATER_NECTAR"
+msgstr "Nectar"
+
+msgid "ABILITY_CRATER_HASTE"
+msgstr "Ivresse divine"
+
+msgid "ABILITY_CRATER_ULT"
+msgstr "Coupe des dieux"
+
+msgid "TALENT_CRATER_1A"
+msgstr "Nectar pur"
+
+msgid "TALENT_CRATER_1A_DESC"
+msgstr "Nectar soigne 20 % de plus."
+
+msgid "TALENT_CRATER_1B"
+msgstr "Échanson"
+
+msgid "TALENT_CRATER_1B_DESC"
+msgstr "Nectar se recharge 20 % plus vite."
+
+msgid "TALENT_CRATER_2A"
+msgstr "Tournée générale"
+
+msgid "TALENT_CRATER_2A_DESC"
+msgstr "La zone de Ivresse divine est 40 % plus large."
+
+msgid "TALENT_CRATER_2B"
+msgstr "Longue ivresse"
+
+msgid "TALENT_CRATER_2B_DESC"
+msgstr "Ivresse divine dure 40 % plus longtemps."
+
+msgid "TALENT_CRATER_3A"
+msgstr "Coupe pleine"
+
+msgid "TALENT_CRATER_3A_DESC"
+msgstr "La zone de Nectar est 40 % plus large."
+
+msgid "TALENT_CRATER_3B"
+msgstr "Ambroisie vive"
+
+msgid "TALENT_CRATER_3B_DESC"
+msgstr "Goutte d'ambroisie inflige 30 % de dégâts en plus."
+
+msgid "HERO_CETUS"
+msgstr "Okeanos de la Baleine"
+
+msgid "ABILITY_CETUS_ATTACK"
+msgstr "Coup de queue"
+
+msgid "ABILITY_CETUS_WAVE"
+msgstr "Lame de fond"
+
+msgid "ABILITY_CETUS_SHELL"
+msgstr "Carapace"
+
+msgid "ABILITY_CETUS_ULT"
+msgstr "Raz-de-marée"
+
+msgid "TALENT_CETUS_1A"
+msgstr "Cuir de léviathan"
+
+msgid "TALENT_CETUS_1A_DESC"
+msgstr "Okeanos gagne 12 % de vie maximale."
+
+msgid "TALENT_CETUS_1B"
+msgstr "Queue puissante"
+
+msgid "TALENT_CETUS_1B_DESC"
+msgstr "Coup de queue inflige 25 % de dégâts en plus."
+
+msgid "TALENT_CETUS_2A"
+msgstr "Houle"
+
+msgid "TALENT_CETUS_2A_DESC"
+msgstr "Lame de fond repousse 50 % plus loin."
+
+msgid "TALENT_CETUS_2B"
+msgstr "Carapace épaisse"
+
+msgid "TALENT_CETUS_2B_DESC"
+msgstr "Carapace absorbe 35 % de dégâts en plus."
+
+msgid "TALENT_CETUS_3A"
+msgstr "Marée montante"
+
+msgid "TALENT_CETUS_3A_DESC"
+msgstr "Lame de fond se recharge 30 % plus vite."
+
+msgid "TALENT_CETUS_3B"
+msgstr "Mue rapide"
+
+msgid "TALENT_CETUS_3B_DESC"
+msgstr "Carapace se recharge 30 % plus vite."
+
+msgid "HERO_CORONA"
+msgstr "Ariane de la Couronne"
+
+msgid "ABILITY_CORONA_ATTACK"
+msgstr "Étincelle"
+
+msgid "ABILITY_CORONA_STAR"
+msgstr "Astre tombant"
+
+msgid "ABILITY_CORONA_BLINK"
+msgstr "Éclat"
+
+msgid "ABILITY_CORONA_ULT"
+msgstr "Couronne d'étoiles"
+
+msgid "TALENT_CORONA_1A"
+msgstr "Astre géant"
+
+msgid "TALENT_CORONA_1A_DESC"
+msgstr "La zone de Astre tombant est 25 % plus large."
+
+msgid "TALENT_CORONA_1B"
+msgstr "Étincelle vive"
+
+msgid "TALENT_CORONA_1B_DESC"
+msgstr "Étincelle inflige 20 % de dégâts en plus."
+
+msgid "TALENT_CORONA_2A"
+msgstr "Pluie d'astres"
+
+msgid "TALENT_CORONA_2A_DESC"
+msgstr "Astre tombant se recharge 25 % plus vite."
+
+msgid "TALENT_CORONA_2B"
+msgstr "Fil d'Ariane"
+
+msgid "TALENT_CORONA_2B_DESC"
+msgstr "Éclat se recharge 30 % plus vite."
+
+msgid "TALENT_CORONA_3A"
+msgstr "Astre ardent"
+
+msgid "TALENT_CORONA_3A_DESC"
+msgstr "Astre tombant inflige 35 % de dégâts en plus."
+
+msgid "TALENT_CORONA_3B"
+msgstr "Voûte céleste"
+
+msgid "TALENT_CORONA_3B_DESC"
+msgstr "Astre tombant porte 30 % plus loin."
+
+msgid "HERO_DELPHINUS"
+msgstr "Arion du Dauphin"
+
+msgid "ABILITY_DELPHINUS_ATTACK"
+msgstr "Jet d'écume"
+
+msgid "ABILITY_DELPHINUS_WAVE"
+msgstr "Vague porteuse"
+
+msgid "ABILITY_DELPHINUS_SURF"
+msgstr "Ressac"
+
+msgid "ABILITY_DELPHINUS_ULT"
+msgstr "Chant d'Arion"
+
+msgid "TALENT_DELPHINUS_1A"
+msgstr "Vague haute"
+
+msgid "TALENT_DELPHINUS_1A_DESC"
+msgstr "Vague porteuse soigne 20 % de plus."
+
+msgid "TALENT_DELPHINUS_1B"
+msgstr "Nage vive"
+
+msgid "TALENT_DELPHINUS_1B_DESC"
+msgstr "Arion se déplace 10 % plus vite."
+
+msgid "TALENT_DELPHINUS_2A"
+msgstr "Grande vague"
+
+msgid "TALENT_DELPHINUS_2A_DESC"
+msgstr "La zone de Vague porteuse est 30 % plus large."
+
+msgid "TALENT_DELPHINUS_2B"
+msgstr "Marée basse"
+
+msgid "TALENT_DELPHINUS_2B_DESC"
+msgstr "Ressac se recharge 30 % plus vite."
+
+msgid "TALENT_DELPHINUS_3A"
+msgstr "Vagues serrées"
+
+msgid "TALENT_DELPHINUS_3A_DESC"
+msgstr "Vague porteuse se recharge 25 % plus vite."
+
+msgid "TALENT_DELPHINUS_3B"
+msgstr "Ressac puissant"
+
+msgid "TALENT_DELPHINUS_3B_DESC"
+msgstr "Ressac repousse 50 % plus loin."
+
+msgid "HERO_CENTAURUS"
+msgstr "Pholos du Centaure"
+
+msgid "ABILITY_CENTAURUS_ATTACK"
+msgstr "Coup de lance"
+
+msgid "ABILITY_CENTAURUS_KICK"
+msgstr "Ruade"
+
+msgid "ABILITY_CENTAURUS_GALLOP"
+msgstr "Galop"
+
+msgid "ABILITY_CENTAURUS_ULT"
+msgstr "Charge du centaure"
+
+msgid "TALENT_CENTAURUS_1A"
+msgstr "Robuste"
+
+msgid "TALENT_CENTAURUS_1A_DESC"
+msgstr "Pholos gagne 12 % de vie maximale."
+
+msgid "TALENT_CENTAURUS_1B"
+msgstr "Fer de lance"
+
+msgid "TALENT_CENTAURUS_1B_DESC"
+msgstr "Coup de lance inflige 20 % de dégâts en plus."
+
+msgid "TALENT_CENTAURUS_2A"
+msgstr "Long galop"
+
+msgid "TALENT_CENTAURUS_2A_DESC"
+msgstr "Galop dure 40 % plus longtemps."
+
+msgid "TALENT_CENTAURUS_2B"
+msgstr "Ruade brutale"
+
+msgid "TALENT_CENTAURUS_2B_DESC"
+msgstr "Ruade repousse 40 % plus loin."
+
+msgid "TALENT_CENTAURUS_3A"
+msgstr "Sabots vifs"
+
+msgid "TALENT_CENTAURUS_3A_DESC"
+msgstr "Ruade se recharge 30 % plus vite."
+
+msgid "TALENT_CENTAURUS_3B"
+msgstr "Grand galop"
+
+msgid "TALENT_CENTAURUS_3B_DESC"
+msgstr "Galop accélère 40 % de plus."
+
+msgid "HERO_LYNX"
+msgstr "Atalante du Lynx"
+
+msgid "ABILITY_LYNX_ATTACK"
+msgstr "Javelot léger"
+
+msgid "ABILITY_LYNX_LASSO"
+msgstr "Lasso"
+
+msgid "ABILITY_LYNX_LEAP"
+msgstr "Bond"
+
+msgid "ABILITY_LYNX_ULT"
+msgstr "Triple trait"
+
+msgid "TALENT_LYNX_1A"
+msgstr "Pointe de bronze"
+
+msgid "TALENT_LYNX_1A_DESC"
+msgstr "Javelot léger inflige 20 % de dégâts en plus."
+
+msgid "TALENT_LYNX_1B"
+msgstr "Jarret souple"
+
+msgid "TALENT_LYNX_1B_DESC"
+msgstr "Bond se recharge 30 % plus vite."
+
+msgid "TALENT_LYNX_2A"
+msgstr "Main sûre"
+
+msgid "TALENT_LYNX_2A_DESC"
+msgstr "Lasso se recharge 30 % plus vite."
+
+msgid "TALENT_LYNX_2B"
+msgstr "Longue corde"
+
+msgid "TALENT_LYNX_2B_DESC"
+msgstr "Lasso porte 25 % plus loin."
+
+msgid "TALENT_LYNX_3A"
+msgstr "Cadence"
+
+msgid "TALENT_LYNX_3A_DESC"
+msgstr "Javelot léger se recharge 15 % plus vite."
+
+msgid "TALENT_LYNX_3B"
+msgstr "Course d'Atalante"
+
+msgid "TALENT_LYNX_3B_DESC"
+msgstr "Atalante se déplace 10 % plus vite."
+
+msgid "HERO_ARA"
+msgstr "Hestia de l'Autel"
+
+msgid "ABILITY_ARA_ATTACK"
+msgstr "Tison"
+
+msgid "ABILITY_ARA_HEARTH"
+msgstr "Flamme du foyer"
+
+msgid "ABILITY_ARA_EMBERS"
+msgstr "Braises"
+
+msgid "ABILITY_ARA_ULT"
+msgstr "Feu sacré"
+
+msgid "TALENT_ARA_1A"
+msgstr "Foyer ardent"
+
+msgid "TALENT_ARA_1A_DESC"
+msgstr "Flamme du foyer soigne 20 % de plus."
+
+msgid "TALENT_ARA_1B"
+msgstr "Braises vives"
+
+msgid "TALENT_ARA_1B_DESC"
+msgstr "Braises inflige 40 % de dégâts en plus."
+
+msgid "TALENT_ARA_2A"
+msgstr "Cendres tenaces"
+
+msgid "TALENT_ARA_2A_DESC"
+msgstr "Braises ralentit 50 % plus longtemps."
+
+msgid "TALENT_ARA_2B"
+msgstr "Feu entretenu"
+
+msgid "TALENT_ARA_2B_DESC"
+msgstr "Flamme du foyer se recharge 20 % plus vite."
+
+msgid "TALENT_ARA_3A"
+msgstr "Grand foyer"
+
+msgid "TALENT_ARA_3A_DESC"
+msgstr "La zone de Flamme du foyer est 35 % plus large."
+
+msgid "TALENT_ARA_3B"
+msgstr "Brasier"
+
+msgid "TALENT_ARA_3B_DESC"
+msgstr "La zone de Braises est 30 % plus large."

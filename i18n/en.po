@@ -7,7 +7,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 
 msgid "MENU_SUBTITLE"
-msgstr "Prototype — milestone 4: PC and mobile"
+msgstr "Prototype — milestone 5: twelve heroes"
 
 msgid "MENU_NAME_PLACEHOLDER"
 msgstr "Your name"
@@ -320,3 +320,462 @@ msgstr "Menu"
 
 msgid "HUD_TALENT_TITLE_TOUCH"
 msgstr "Level %d: touch a talent to pick it"
+
+msgid "HERO_URSA"
+msgstr "Kallias of the Bear"
+
+msgid "ABILITY_URSA_ATTACK"
+msgstr "Claws"
+
+msgid "ABILITY_URSA_CHARGE"
+msgstr "Bear Charge"
+
+msgid "ABILITY_URSA_ROAR"
+msgstr "Roar"
+
+msgid "ABILITY_URSA_ULT"
+msgstr "Fury of the Bear"
+
+msgid "TALENT_URSA_1A"
+msgstr "Thick Fur"
+
+msgid "TALENT_URSA_1A_DESC"
+msgstr "Kallias gains 15% max health."
+
+msgid "TALENT_URSA_1B"
+msgstr "Sharp Claws"
+
+msgid "TALENT_URSA_1B_DESC"
+msgstr "Claws deals 25% more damage."
+
+msgid "TALENT_URSA_2A"
+msgstr "Momentum"
+
+msgid "TALENT_URSA_2A_DESC"
+msgstr "Bear Charge recharges 30% faster."
+
+msgid "TALENT_URSA_2B"
+msgstr "Thunder Voice"
+
+msgid "TALENT_URSA_2B_DESC"
+msgstr "Roar slows 50% longer."
+
+msgid "TALENT_URSA_3A"
+msgstr "Impact"
+
+msgid "TALENT_URSA_3A_DESC"
+msgstr "Bear Charge deals 50% more damage."
+
+msgid "TALENT_URSA_3B"
+msgstr "Heavy but Quick"
+
+msgid "TALENT_URSA_3B_DESC"
+msgstr "Kallias moves 10% faster."
+
+msgid "HERO_CORVUS"
+msgstr "Nyx of the Raven"
+
+msgid "ABILITY_CORVUS_ATTACK"
+msgstr "Talons"
+
+msgid "ABILITY_CORVUS_DIVE"
+msgstr "Dive"
+
+msgid "ABILITY_CORVUS_NIGHT"
+msgstr "Night Flight"
+
+msgid "ABILITY_CORVUS_ULT"
+msgstr "Feather Storm"
+
+msgid "TALENT_CORVUS_1A"
+msgstr "Whetted Talons"
+
+msgid "TALENT_CORVUS_1A_DESC"
+msgstr "Talons deals 20% more damage."
+
+msgid "TALENT_CORVUS_1B"
+msgstr "Raptor"
+
+msgid "TALENT_CORVUS_1B_DESC"
+msgstr "Dive recharges 25% faster."
+
+msgid "TALENT_CORVUS_2A"
+msgstr "Long Night"
+
+msgid "TALENT_CORVUS_2A_DESC"
+msgstr "Night Flight lasts 50% longer."
+
+msgid "TALENT_CORVUS_2B"
+msgstr "Feast"
+
+msgid "TALENT_CORVUS_2B_DESC"
+msgstr "Talons restores 100% more health."
+
+msgid "TALENT_CORVUS_3A"
+msgstr "Deadly Stoop"
+
+msgid "TALENT_CORVUS_3A_DESC"
+msgstr "Dive deals 40% more damage."
+
+msgid "TALENT_CORVUS_3B"
+msgstr "Dense Plumage"
+
+msgid "TALENT_CORVUS_3B_DESC"
+msgstr "Nyx gains 15% max health."
+
+msgid "HERO_CRATER"
+msgstr "Hebe of the Cup"
+
+msgid "ABILITY_CRATER_ATTACK"
+msgstr "Ambrosia Drop"
+
+msgid "ABILITY_CRATER_NECTAR"
+msgstr "Nectar"
+
+msgid "ABILITY_CRATER_HASTE"
+msgstr "Divine Rapture"
+
+msgid "ABILITY_CRATER_ULT"
+msgstr "Cup of the Gods"
+
+msgid "TALENT_CRATER_1A"
+msgstr "Pure Nectar"
+
+msgid "TALENT_CRATER_1A_DESC"
+msgstr "Nectar heals 20% more."
+
+msgid "TALENT_CRATER_1B"
+msgstr "Cupbearer"
+
+msgid "TALENT_CRATER_1B_DESC"
+msgstr "Nectar recharges 20% faster."
+
+msgid "TALENT_CRATER_2A"
+msgstr "Round for All"
+
+msgid "TALENT_CRATER_2A_DESC"
+msgstr "Divine Rapture's area is 40% wider."
+
+msgid "TALENT_CRATER_2B"
+msgstr "Long Rapture"
+
+msgid "TALENT_CRATER_2B_DESC"
+msgstr "Divine Rapture lasts 40% longer."
+
+msgid "TALENT_CRATER_3A"
+msgstr "Brimming Cup"
+
+msgid "TALENT_CRATER_3A_DESC"
+msgstr "Nectar's area is 40% wider."
+
+msgid "TALENT_CRATER_3B"
+msgstr "Keen Ambrosia"
+
+msgid "TALENT_CRATER_3B_DESC"
+msgstr "Ambrosia Drop deals 30% more damage."
+
+msgid "HERO_CETUS"
+msgstr "Okeanos of the Whale"
+
+msgid "ABILITY_CETUS_ATTACK"
+msgstr "Tail Slap"
+
+msgid "ABILITY_CETUS_WAVE"
+msgstr "Groundswell"
+
+msgid "ABILITY_CETUS_SHELL"
+msgstr "Carapace"
+
+msgid "ABILITY_CETUS_ULT"
+msgstr "Tidal Wave"
+
+msgid "TALENT_CETUS_1A"
+msgstr "Leviathan Hide"
+
+msgid "TALENT_CETUS_1A_DESC"
+msgstr "Okeanos gains 12% max health."
+
+msgid "TALENT_CETUS_1B"
+msgstr "Mighty Tail"
+
+msgid "TALENT_CETUS_1B_DESC"
+msgstr "Tail Slap deals 25% more damage."
+
+msgid "TALENT_CETUS_2A"
+msgstr "Heavy Swell"
+
+msgid "TALENT_CETUS_2A_DESC"
+msgstr "Groundswell pushes 50% farther."
+
+msgid "TALENT_CETUS_2B"
+msgstr "Thick Carapace"
+
+msgid "TALENT_CETUS_2B_DESC"
+msgstr "Carapace absorbs 35% more damage."
+
+msgid "TALENT_CETUS_3A"
+msgstr "Rising Tide"
+
+msgid "TALENT_CETUS_3A_DESC"
+msgstr "Groundswell recharges 30% faster."
+
+msgid "TALENT_CETUS_3B"
+msgstr "Quick Molt"
+
+msgid "TALENT_CETUS_3B_DESC"
+msgstr "Carapace recharges 30% faster."
+
+msgid "HERO_CORONA"
+msgstr "Ariadne of the Crown"
+
+msgid "ABILITY_CORONA_ATTACK"
+msgstr "Spark"
+
+msgid "ABILITY_CORONA_STAR"
+msgstr "Falling Star"
+
+msgid "ABILITY_CORONA_BLINK"
+msgstr "Flash"
+
+msgid "ABILITY_CORONA_ULT"
+msgstr "Crown of Stars"
+
+msgid "TALENT_CORONA_1A"
+msgstr "Giant Star"
+
+msgid "TALENT_CORONA_1A_DESC"
+msgstr "Falling Star's area is 25% wider."
+
+msgid "TALENT_CORONA_1B"
+msgstr "Bright Spark"
+
+msgid "TALENT_CORONA_1B_DESC"
+msgstr "Spark deals 20% more damage."
+
+msgid "TALENT_CORONA_2A"
+msgstr "Starfall"
+
+msgid "TALENT_CORONA_2A_DESC"
+msgstr "Falling Star recharges 25% faster."
+
+msgid "TALENT_CORONA_2B"
+msgstr "Ariadne's Thread"
+
+msgid "TALENT_CORONA_2B_DESC"
+msgstr "Flash recharges 30% faster."
+
+msgid "TALENT_CORONA_3A"
+msgstr "Burning Star"
+
+msgid "TALENT_CORONA_3A_DESC"
+msgstr "Falling Star deals 35% more damage."
+
+msgid "TALENT_CORONA_3B"
+msgstr "Vault of Heaven"
+
+msgid "TALENT_CORONA_3B_DESC"
+msgstr "Falling Star reaches 30% farther."
+
+msgid "HERO_DELPHINUS"
+msgstr "Arion of the Dolphin"
+
+msgid "ABILITY_DELPHINUS_ATTACK"
+msgstr "Foam Jet"
+
+msgid "ABILITY_DELPHINUS_WAVE"
+msgstr "Carrying Wave"
+
+msgid "ABILITY_DELPHINUS_SURF"
+msgstr "Backwash"
+
+msgid "ABILITY_DELPHINUS_ULT"
+msgstr "Arion's Song"
+
+msgid "TALENT_DELPHINUS_1A"
+msgstr "High Wave"
+
+msgid "TALENT_DELPHINUS_1A_DESC"
+msgstr "Carrying Wave heals 20% more."
+
+msgid "TALENT_DELPHINUS_1B"
+msgstr "Swift Swim"
+
+msgid "TALENT_DELPHINUS_1B_DESC"
+msgstr "Arion moves 10% faster."
+
+msgid "TALENT_DELPHINUS_2A"
+msgstr "Great Wave"
+
+msgid "TALENT_DELPHINUS_2A_DESC"
+msgstr "Carrying Wave's area is 30% wider."
+
+msgid "TALENT_DELPHINUS_2B"
+msgstr "Ebb Tide"
+
+msgid "TALENT_DELPHINUS_2B_DESC"
+msgstr "Backwash recharges 30% faster."
+
+msgid "TALENT_DELPHINUS_3A"
+msgstr "Close Waves"
+
+msgid "TALENT_DELPHINUS_3A_DESC"
+msgstr "Carrying Wave recharges 25% faster."
+
+msgid "TALENT_DELPHINUS_3B"
+msgstr "Strong Backwash"
+
+msgid "TALENT_DELPHINUS_3B_DESC"
+msgstr "Backwash pushes 50% farther."
+
+msgid "HERO_CENTAURUS"
+msgstr "Pholus of the Centaur"
+
+msgid "ABILITY_CENTAURUS_ATTACK"
+msgstr "Spear Thrust"
+
+msgid "ABILITY_CENTAURUS_KICK"
+msgstr "Hind Kick"
+
+msgid "ABILITY_CENTAURUS_GALLOP"
+msgstr "Gallop"
+
+msgid "ABILITY_CENTAURUS_ULT"
+msgstr "Centaur's Charge"
+
+msgid "TALENT_CENTAURUS_1A"
+msgstr "Sturdy"
+
+msgid "TALENT_CENTAURUS_1A_DESC"
+msgstr "Pholus gains 12% max health."
+
+msgid "TALENT_CENTAURUS_1B"
+msgstr "Spearhead"
+
+msgid "TALENT_CENTAURUS_1B_DESC"
+msgstr "Spear Thrust deals 20% more damage."
+
+msgid "TALENT_CENTAURUS_2A"
+msgstr "Long Gallop"
+
+msgid "TALENT_CENTAURUS_2A_DESC"
+msgstr "Gallop lasts 40% longer."
+
+msgid "TALENT_CENTAURUS_2B"
+msgstr "Brutal Kick"
+
+msgid "TALENT_CENTAURUS_2B_DESC"
+msgstr "Hind Kick pushes 40% farther."
+
+msgid "TALENT_CENTAURUS_3A"
+msgstr "Quick Hooves"
+
+msgid "TALENT_CENTAURUS_3A_DESC"
+msgstr "Hind Kick recharges 30% faster."
+
+msgid "TALENT_CENTAURUS_3B"
+msgstr "Full Gallop"
+
+msgid "TALENT_CENTAURUS_3B_DESC"
+msgstr "Gallop grants 40% more speed."
+
+msgid "HERO_LYNX"
+msgstr "Atalanta of the Lynx"
+
+msgid "ABILITY_LYNX_ATTACK"
+msgstr "Light Javelin"
+
+msgid "ABILITY_LYNX_LASSO"
+msgstr "Lasso"
+
+msgid "ABILITY_LYNX_LEAP"
+msgstr "Leap"
+
+msgid "ABILITY_LYNX_ULT"
+msgstr "Triple Shot"
+
+msgid "TALENT_LYNX_1A"
+msgstr "Bronze Tip"
+
+msgid "TALENT_LYNX_1A_DESC"
+msgstr "Light Javelin deals 20% more damage."
+
+msgid "TALENT_LYNX_1B"
+msgstr "Supple Hock"
+
+msgid "TALENT_LYNX_1B_DESC"
+msgstr "Leap recharges 30% faster."
+
+msgid "TALENT_LYNX_2A"
+msgstr "Sure Hand"
+
+msgid "TALENT_LYNX_2A_DESC"
+msgstr "Lasso recharges 30% faster."
+
+msgid "TALENT_LYNX_2B"
+msgstr "Long Rope"
+
+msgid "TALENT_LYNX_2B_DESC"
+msgstr "Lasso reaches 25% farther."
+
+msgid "TALENT_LYNX_3A"
+msgstr "Cadence"
+
+msgid "TALENT_LYNX_3A_DESC"
+msgstr "Light Javelin recharges 15% faster."
+
+msgid "TALENT_LYNX_3B"
+msgstr "Atalanta's Race"
+
+msgid "TALENT_LYNX_3B_DESC"
+msgstr "Atalanta moves 10% faster."
+
+msgid "HERO_ARA"
+msgstr "Hestia of the Altar"
+
+msgid "ABILITY_ARA_ATTACK"
+msgstr "Firebrand"
+
+msgid "ABILITY_ARA_HEARTH"
+msgstr "Hearth Flame"
+
+msgid "ABILITY_ARA_EMBERS"
+msgstr "Embers"
+
+msgid "ABILITY_ARA_ULT"
+msgstr "Sacred Fire"
+
+msgid "TALENT_ARA_1A"
+msgstr "Blazing Hearth"
+
+msgid "TALENT_ARA_1A_DESC"
+msgstr "Hearth Flame heals 20% more."
+
+msgid "TALENT_ARA_1B"
+msgstr "Live Embers"
+
+msgid "TALENT_ARA_1B_DESC"
+msgstr "Embers deals 40% more damage."
+
+msgid "TALENT_ARA_2A"
+msgstr "Clinging Ash"
+
+msgid "TALENT_ARA_2A_DESC"
+msgstr "Embers slows 50% longer."
+
+msgid "TALENT_ARA_2B"
+msgstr "Tended Fire"
+
+msgid "TALENT_ARA_2B_DESC"
+msgstr "Hearth Flame recharges 20% faster."
+
+msgid "TALENT_ARA_3A"
+msgstr "Great Hearth"
+
+msgid "TALENT_ARA_3A_DESC"
+msgstr "Hearth Flame's area is 35% wider."
+
+msgid "TALENT_ARA_3B"
+msgstr "Blaze"
+
+msgid "TALENT_ARA_3B_DESC"
+msgstr "Embers's area is 30% wider."

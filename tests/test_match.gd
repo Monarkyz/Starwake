@@ -20,8 +20,8 @@ func _play(seed_value: int) -> int:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_value
 	for i in SimConst.MAX_PLAYERS:
-		# Chaque équipe aligne un tank, un assassin et un soutien, comme le fait le serveur.
-		var hero := world.add_hero(i % 2, GameServer.BOT_HEROES[i / 2])
+		# Chaque équipe aligne un tank, un assassin et un soutien tirés au hasard, comme le fait le serveur.
+		var hero := world.add_hero(i % 2, GameServer.pick_bot_hero(world, i % 2, rng))
 		var brain := BotBrain.new(seed_value * 100 + i)
 		brain.lane = hero.spawn_slot % 2
 		brain.roamer = hero.spawn_slot >= 2
@@ -56,6 +56,11 @@ func _play(seed_value: int) -> int:
 
 	var minutes := world.tick * SimConst.DT / 60.0
 	var per_tick_ms := (Time.get_ticks_usec() - started) / 1000.0 / world.tick
+	var lineup: Array = [[], []]
+	for id: int in world.heroes:
+		var hero: SimHero = world.heroes[id]
+		lineup[hero.team].append(hero.def_id)
+	print("lineup seed=%d dawn=%s dusk=%s" % [seed_value, ",".join(lineup[0]), ",".join(lineup[1])])
 	print("seed=%d winner=%d minutes=%.1f levels=%s kills=%s events=%s max_units=%d max_bytes=%d avg_ms=%.2f slowest_ms=%.1f" % [
 		seed_value, world.winner, minutes, world.team_level, world.team_kills, counts,
 		max_units, max_bytes, per_tick_ms, slowest_usec / 1000.0,

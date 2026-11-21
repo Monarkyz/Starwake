@@ -18,6 +18,10 @@ var pierce: bool = false
 var stun_ticks: int = 0
 var slow_ticks: int = 0
 var slow_pct: int = 0
+## Déplacement imposé à la cible : positif, elle est repoussée ; négatif, attirée vers le lanceur.
+var knockback: float = 0.0
+## Part des dégâts rendue en vie au lanceur.
+var lifesteal: float = 0.0
 ## Cibles déjà touchées : type de cible * SimWorld.TARGET_KEY + identifiant.
 var hit_ids: Array[int] = []
 

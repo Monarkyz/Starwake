@@ -32,6 +32,12 @@ func _init() -> void:
 	_test_talents()
 	_test_ether_and_awakening()
 	_test_armor_ranks()
+	_test_all_heroes_are_well_formed()
+	_test_every_ability_can_be_cast()
+	_test_delayed_zone()
+	_test_knockback_and_pull()
+	_test_charging_dash()
+	_test_haste_and_lifesteal()
 	_test_snapshot_roundtrip()
 	_test_snapshot_fits_in_a_packet()
 	_test_translations_complete()
@@ -709,6 +715,306 @@ func _test_armor_ranks() -> void:
 	var hp := b.hp
 	world._damage_hero(b, 100.0, SimConst.TEAM_DAWN, 0)
 	_check(is_equal_approx(hp - b.hp, 85.0), "gold armor absorbs 15%% of the damage (took %s)" % (hp - b.hp))
+
+
+# ---------------------------------------------------------------------------
+# Tous les héros : fiches et capacités
+# ---------------------------------------------------------------------------
+
+const ABILITY_KEYS: Dictionary = {
+	"projectile": ["cooldown", "damage", "speed", "range", "radius", "pierce"],
+	"volley": ["cooldown", "damage", "speed", "range", "radius", "pierce", "count", "spread"],
+	"melee": ["cooldown", "damage", "range", "arc"],
+	"zone": ["cooldown", "damage", "range", "radius", "delay"],
+	"dash": ["cooldown", "distance", "duration"],
+	"shield": ["cooldown", "amount", "duration"],
+	"heal_area": ["cooldown", "amount", "range", "radius"],
+	"haste": ["cooldown", "haste", "duration", "radius"],
+}
+const AI_ROLES: Array[String] = ["damage", "engage", "escape", "shield", "heal", "haste", "awaken"]
+
+
+func _test_all_heroes_are_well_formed() -> void:
+	var french: Translation = load("res://i18n/fr.po")
+	var per_role: Array[int] = []
+	for role in HeroDefs.ROLES:
+		per_role.append(HeroDefs.ids_by_role(role).size())
+	_check(per_role.min() >= 1 and per_role.min() == per_role.max(), "every role has the same number of heroes %s" % [per_role])
+	_check(HeroDefs.ids().size() <= 255, "hero kinds fit in one byte on the network")
+	for def_id: String in HeroDefs.ids():
+		var def: Dictionary = HeroDefs.get_def(def_id)
+		for key: String in ["name_key", "role_key", "look", "max_hp", "speed", "radius", "preferred_range", "abilities", "talents"]:
+			_check(def.has(key), "%s has %s" % [def_id, key])
+		_check(HeroDefs.ROLES.has(def["role_key"]), "%s has a known role" % def_id)
+		_check(not String(french.get_message(def["name_key"])).is_empty(), "%s has a translated name" % def_id)
+		_check(HeroDefs.id_at(HeroDefs.index_of(def_id)) == def_id, "%s keeps its identity on the network" % def_id)
+		var abilities: Array = def["abilities"]
+		_check(abilities.size() == 4, "%s has four abilities" % def_id)
+		for slot in abilities.size():
+			var ability: Dictionary = abilities[slot]
+			var label := "%s ability %d" % [def_id, slot]
+			_check(ABILITY_KEYS.has(ability["type"]), "%s has a known type" % label)
+			for key: String in ABILITY_KEYS.get(ability["type"], []):
+				_check(ability.has(key), "%s has %s" % [label, key])
+			_check(AI_ROLES.has(ability.get("ai", "")), "%s tells bots when to use it" % label)
+			_check(ability.get("awakening", false) == (slot == 3), "%s: only the fourth ability is the ultimate" % label)
+			_check(not String(french.get_message(ability["name_key"])).is_empty(), "%s has a translated name" % label)
+			_check(ability.has("slow") == ability.has("slow_duration"), "%s: a slow comes with its duration" % label)
+		_check((abilities[3] as Dictionary).get("ai", "") == "awaken", "%s: bots know its ultimate" % def_id)
+		# Talents : un palier par niveau de talent, deux choix, chacun modifiant une valeur qui existe.
+		var hero := SimHero.new()
+		hero.def_id = def_id
+		var tiers: Array = def["talents"]
+		_check(tiers.size() == SimConst.TALENT_LEVELS.size(), "%s has one talent tier per talent level" % def_id)
+		for tier in tiers.size():
+			var options: Array = tiers[tier]
+			_check(options.size() == 2, "%s tier %d offers two talents" % [def_id, tier])
+			for choice in options.size():
+				var option: Dictionary = options[choice]
+				var label := "%s talent %d%s" % [def_id, tier + 1, "AB"[choice]]
+				_check(not String(french.get_message(option["name_key"])).is_empty() and not String(french.get_message(option["desc_key"])).is_empty(), "%s is translated" % label)
+				for mod: Dictionary in option["mods"]:
+					var slot: int = mod["slot"]
+					var target: Dictionary = def if slot < 0 else abilities[slot]
+					_check(target.has(mod["key"]), "%s changes a value that exists (%s)" % [label, mod["key"]])
+					if not target.has(mod["key"]):
+						continue
+					var base := HeroDefs.value(hero, slot, mod["key"])
+					hero.talents[tier] = choice + 1
+					_check(not is_equal_approx(HeroDefs.value(hero, slot, mod["key"]), base), "%s has an effect" % label)
+					hero.talents[tier] = 0
+
+
+## Chaque capacité de chaque héros doit pouvoir se lancer et produire un effet visible.
+func _test_every_ability_can_be_cast() -> void:
+	for def_id: String in HeroDefs.ids():
+		var arena := SimArena.new()
+		arena.half_size = Vector2(40.0, 20.0)
+		arena.spawns = [[Vector2.ZERO, Vector2(0.0, 2.5)], [Vector2(2.8, 0.0)]]
+		var world := SimWorld.new(arena)
+		var me := world.add_hero(SimConst.TEAM_DAWN, def_id)
+		var ally := world.add_hero(SimConst.TEAM_DAWN)
+		var enemy := world.add_hero(SimConst.TEAM_DUSK, "scutum")
+		var abilities: Array = HeroDefs.get_def(def_id)["abilities"]
+		for slot in abilities.size():
+			# Remettre la scène en place : tout le monde blessé, face à face.
+			me.pos = Vector2.ZERO
+			ally.pos = Vector2(0.0, 2.5)
+			enemy.pos = Vector2(2.8, 0.0)  # À portée des coups au corps à corps.
+			for h: SimHero in [me, ally, enemy]:
+				h.hp = h.max_hp * 0.5
+				h.shield = 0.0
+				h.haste_ticks = 0
+				h.stun_ticks = 0
+				h.slow_ticks = 0
+				h.dash_left = 0.0
+				h.last_hit_tick = world.tick
+			me.cooldowns = [0.0, 0.0, 0.0]
+			me.awaken_ticks = 0
+			me.ether = SimConst.ETHER_MAX if slot == 3 else 0.0
+			world.projectiles.clear()
+			var before := _signature(world, me, ally, enemy)
+			var press := _input(Vector2.ZERO, enemy.pos, 1 << slot)
+			if (abilities[slot] as Dictionary)["type"] == "heal_area":
+				press.aim = ally.pos
+			world.step({me.id: press})
+			var cast_ok := me.is_awakened() if slot == 3 else me.cooldowns[slot] > 0.0
+			_check(cast_ok, "%s ability %d starts when its button is pressed" % [def_id, slot])
+			_steps(world, 1.2, {me.id: _input(Vector2.ZERO, enemy.pos)})
+			_check(_signature(world, me, ally, enemy) != before or world.projectiles.size() > 0,
+					"%s ability %d has a visible effect" % [def_id, slot])
+			_check(me.alive and is_finite(me.pos.x) and world.arena.is_inside(me.pos), "%s ability %d leaves the hero in a sane state" % [def_id, slot])
+
+
+## Résumé de ce qu'une capacité peut changer autour d'elle.
+func _signature(world: SimWorld, me: SimHero, ally: SimHero, enemy: SimHero) -> Array:
+	return [
+		roundi(enemy.hp), enemy.pos.snappedf(0.1), enemy.stun_ticks > 0, enemy.slow_ticks > 0,
+		roundi(ally.hp), ceili(ally.shield), ally.haste_ticks > 0,
+		roundi(me.hp), ceili(me.shield), me.haste_ticks > 0, me.pos.snappedf(0.1),
+	]
+
+
+# ---------------------------------------------------------------------------
+# Nouvelles mécaniques : zone, repoussement, charge, hâte, vol de vie
+# ---------------------------------------------------------------------------
+
+func _test_delayed_zone() -> void:
+	var duel := _duel(Vector2.ZERO, Vector2(8.0, 0.0), "corona", "sagitta")
+	var world: SimWorld = duel[0]
+	var mage: SimHero = duel[1]
+	var target: SimHero = duel[2]
+	var runner := world.add_hero(SimConst.TEAM_DUSK)
+	runner.pos = Vector2(8.0, 1.5)
+	var minion := world._spawn_unit(UnitDefs.FOOTMAN, SimConst.TEAM_DUSK, Vector2(8.0, -1.5))
+	minion.attack_cd = 1000.0
+	world.step({mage.id: _input(Vector2.ZERO, target.pos, SimConst.BTN_ABILITY_1)})
+	var warned := false
+	for beam: Array in world.beams:
+		if beam[0] == SimWorld.FX_WARN and (beam[1] as Vector2).is_equal_approx(target.pos):
+			warned = true
+	_check(warned, "a zone is announced on the ground where it will strike")
+	# Le coureur quitte la zone pendant le délai ; la cible reste.
+	_steps(world, 0.5, {runner.id: _input(Vector2.DOWN, Vector2.ZERO)})
+	_check(is_equal_approx(target.hp, target.max_hp), "a zone does nothing before its delay")
+	_steps(world, 0.5, {runner.id: _input(Vector2.DOWN, Vector2.ZERO)})
+	_check(is_equal_approx(target.max_hp - target.hp, 250.0), "a zone strikes whoever is still inside (dealt %s)" % (target.max_hp - target.hp))
+	_check(is_equal_approx(runner.hp, runner.max_hp), "leaving the zone in time avoids it")
+	_check(minion.hp < minion.max_hp, "a zone also hits minions")
+	# Hors de portée : la zone se pose à la limite de portée.
+	mage.cooldowns[1] = 0.0
+	target.pos = Vector2(30.0, 0.0)
+	target.hp = target.max_hp
+	world.step({mage.id: _input(Vector2.ZERO, target.pos, SimConst.BTN_ABILITY_1)})
+	_steps(world, 1.0)
+	_check(is_equal_approx(target.hp, target.max_hp), "a zone cannot be cast beyond its range")
+	world.reset_match()
+	_check(world._zones.is_empty(), "pending zones are cleared for a new match")
+
+
+func _test_knockback_and_pull() -> void:
+	# Lame de fond : un projectile qui repousse dans le sens du tir.
+	var duel := _duel(Vector2.ZERO, Vector2(5.0, 0.0), "cetus", "sagitta")
+	var world: SimWorld = duel[0]
+	var whale: SimHero = duel[1]
+	var target: SimHero = duel[2]
+	world.step({whale.id: _input(Vector2.ZERO, target.pos, SimConst.BTN_ABILITY_1)})
+	_steps(world, 1.0)
+	_check(target.hp < target.max_hp and absf(target.pos.x - 8.0) < 0.3, "the groundswell pushes its target 3 units away (x=%s)" % target.pos.x)
+	_check(absf(target.pos.y) < 0.2, "the push follows the direction of the shot")
+	# Le client peut rejouer la poussée : elle voyage comme une ruée.
+	_check(is_zero_approx(target.dash_left), "the push is over after a moment")
+
+	# Lasso : attire la cible vers le lanceur, sans la faire passer derrière lui.
+	var duel2 := _duel(Vector2.ZERO, Vector2(8.0, 0.0), "lynx", "sagitta")
+	var world2: SimWorld = duel2[0]
+	var huntress: SimHero = duel2[1]
+	var prey: SimHero = duel2[2]
+	world2.step({huntress.id: _input(Vector2.ZERO, prey.pos, SimConst.BTN_ABILITY_1)})
+	_steps(world2, 1.0)
+	_check(absf(prey.pos.x - 3.0) < 0.3, "the lasso pulls its target 5 units closer (x=%s)" % prey.pos.x)
+	prey.pos = Vector2(3.0, 0.0)
+	huntress.cooldowns[1] = 0.0
+	world2.step({huntress.id: _input(Vector2.ZERO, prey.pos, SimConst.BTN_ABILITY_1)})
+	_steps(world2, 1.0)
+	_check(prey.pos.x >= 1.4, "a pull never drags the target past the caster (x=%s)" % prey.pos.x)
+
+	# Ruade : coup au corps à corps qui repousse ; un étourdi est poussé quand même.
+	var duel3 := _duel(Vector2.ZERO, Vector2(2.0, 0.0), "centaurus", "sagitta")
+	var world3: SimWorld = duel3[0]
+	var centaur: SimHero = duel3[1]
+	var victim: SimHero = duel3[2]
+	victim.stun_ticks = 60
+	world3.step({centaur.id: _input(Vector2.ZERO, victim.pos, SimConst.BTN_ABILITY_1)})
+	_steps(world3, 0.5)
+	_check(absf(victim.pos.x - 7.0) < 0.3, "the hind kick sends a stunned target 5 units away (x=%s)" % victim.pos.x)
+	# Contre le bord du terrain, la poussée s'arrête au mur.
+	victim.pos = Vector2(world3.arena.half_size.x - 1.5, 0.0)
+	centaur.pos = victim.pos - Vector2(2.0, 0.0)
+	centaur.cooldowns[1] = 0.0
+	world3.step({centaur.id: _input(Vector2.ZERO, victim.pos, SimConst.BTN_ABILITY_1)})
+	_steps(world3, 0.5)
+	_check(world3.arena.is_inside(victim.pos) and victim.pos.x <= world3.arena.half_size.x - 0.6 + 0.001, "a push stops at the arena border")
+
+
+func _test_charging_dash() -> void:
+	var duel := _duel(Vector2.ZERO, Vector2(4.0, 0.0), "ursa", "sagitta")
+	var world: SimWorld = duel[0]
+	var bear: SimHero = duel[1]
+	var target: SimHero = duel[2]
+	var bystander := world.add_hero(SimConst.TEAM_DUSK)
+	bystander.pos = Vector2(4.0, 8.0)
+	world.step({bear.id: _input(Vector2.RIGHT, target.pos, SimConst.BTN_ABILITY_1)})
+	_steps(world, 0.6, {bear.id: _input(Vector2.ZERO, target.pos)})
+	_check(is_equal_approx(target.max_hp - target.hp, 140.0), "a charge hits the enemy in its path exactly once (dealt %s)" % (target.max_hp - target.hp))
+	_check(target.pos.x > 5.5, "a charge knocks its target back (x=%s)" % target.pos.x)
+	_check(is_equal_approx(bystander.hp, bystander.max_hp), "a charge ignores enemies away from its path")
+	_check(bear.dash_slot == -1 and bear.dash_hits.is_empty(), "the charge state is cleared at the end")
+
+	# Plongeon : une ruée visée part vers le point visé, même si le héros marche ailleurs.
+	var duel2 := _duel(Vector2.ZERO, Vector2(5.0, 0.0), "corvus", "sagitta")
+	var world2: SimWorld = duel2[0]
+	var raven: SimHero = duel2[1]
+	var prey: SimHero = duel2[2]
+	var predicted := raven.copy()
+	var dive := _input(Vector2.UP, prey.pos, SimConst.BTN_ABILITY_1)
+	SimWorld.step_hero_local(predicted, dive, world2.arena, SimConst.DT)
+	world2.step({raven.id: dive})
+	_check(raven.dash_vel.normalized().is_equal_approx(Vector2.RIGHT), "an aimed dash goes towards the aim point")
+	_check(predicted.pos.is_equal_approx(raven.pos) and predicted.dash_vel.is_equal_approx(raven.dash_vel), "an aimed dash is predicted identically by the client")
+	_steps(world2, 0.5, {raven.id: _input(Vector2.ZERO, prey.pos)})
+	_check(prey.hp < prey.max_hp, "the dive damages its target")
+
+	# Charge du centaure : une ruée en guise de capacité ultime.
+	var duel3 := _duel(Vector2.ZERO, Vector2(6.0, 0.0), "centaurus", "sagitta")
+	var world3: SimWorld = duel3[0]
+	var centaur: SimHero = duel3[1]
+	var victim: SimHero = duel3[2]
+	centaur.ether = SimConst.ETHER_MAX
+	world3.step({centaur.id: _input(Vector2.ZERO, victim.pos, SimConst.BTN_AWAKEN)})
+	_check(centaur.is_awakened() and centaur.dash_left > 0.0, "an ultimate dash starts with the awakening")
+	_steps(world3, 0.3, {centaur.id: _input(Vector2.ZERO, victim.pos, SimConst.BTN_AWAKEN)})
+	_check(victim.hp < victim.max_hp and victim.stun_ticks > 0, "the centaur's charge hits and stuns")
+	_steps(world3, 1.0, {centaur.id: _input(Vector2.ZERO, victim.pos, SimConst.BTN_AWAKEN)})
+	_check(centaur.pos.x > 9.0 and centaur.pos.x < 12.5, "the ultimate dash happens once (x=%s)" % centaur.pos.x)
+
+	# Tempête de plumes : une volée tout autour, sans deux traits dans la même direction.
+	raven.ether = SimConst.ETHER_MAX
+	world2.projectiles.clear()
+	world2.step({raven.id: _input(Vector2.ZERO, prey.pos, SimConst.BTN_AWAKEN)})
+	var directions: Dictionary = {}
+	for p in world2.projectiles:
+		directions[roundi(rad_to_deg(p.vel.angle()))] = true
+	_check(world2.projectiles.size() == 12 and directions.size() == 12, "a full-circle volley spreads evenly (%d directions)" % directions.size())
+
+
+func _test_haste_and_lifesteal() -> void:
+	var duel := _duel(Vector2.ZERO, Vector2(1.8, 0.0), "corvus", "scutum")
+	var world: SimWorld = duel[0]
+	var raven: SimHero = duel[1]
+	var target: SimHero = duel[2]
+	# Vol de vie : 15 % des dégâts infligés reviennent en vie.
+	raven.hp = 500.0
+	raven.last_hit_tick = world.tick
+	world.step({raven.id: _input(Vector2.ZERO, target.pos, SimConst.BTN_ATTACK)})
+	_check(is_equal_approx(target.max_hp - target.hp, 85.0) and is_equal_approx(raven.hp, 500.0 + 85.0 * 0.15), "a lifesteal attack heals its user (hp=%s)" % raven.hp)
+
+	# Hâte : +40 % de vitesse pendant 3 secondes, prédite à l'identique par le client.
+	target.pos = Vector2(30.0, 10.0)
+	raven.pos = Vector2.ZERO
+	world.step({raven.id: _input(Vector2.ZERO, Vector2(0.0, -10.0), SimConst.BTN_ABILITY_2)})
+	_check(raven.haste_ticks == 90 and raven.haste_pct == 40, "haste is applied for its duration")
+	var predicted := raven.copy()
+	var start := raven.pos
+	var worst := 0.0
+	for i in SimConst.TICK_RATE:
+		var cmd := _input(Vector2.UP, Vector2(0.0, -50.0))
+		SimWorld.step_hero_local(predicted, cmd, world.arena, SimConst.DT)
+		world.step({raven.id: cmd})
+		worst = maxf(worst, predicted.pos.distance_to(raven.pos))
+	_check(absf(start.y - raven.pos.y - 6.4 * 1.4) < 0.05, "a hasted hero moves 40%% faster (%s)" % (start.y - raven.pos.y))
+	_check(worst < 0.0001, "haste is predicted identically by the client")
+	_steps(world, 2.5)
+	start = raven.pos
+	_steps(world, 1.0, {raven.id: _input(Vector2.DOWN, Vector2(0.0, 50.0))})
+	_check(absf(raven.pos.y - start.y - 6.4) < 0.05, "haste wears off")
+
+	# Ivresse divine : les alliés proches accélèrent, pas les adversaires ni les alliés éloignés.
+	var arena := SimArena.new()
+	arena.half_size = Vector2(40.0, 20.0)
+	arena.spawns = [[Vector2.ZERO, Vector2(3.0, 0.0), Vector2(20.0, 0.0)], [Vector2(0.0, 3.0)]]
+	var other := SimWorld.new(arena)
+	var hebe := other.add_hero(SimConst.TEAM_DAWN, "crater")
+	var near := other.add_hero(SimConst.TEAM_DAWN)
+	var far := other.add_hero(SimConst.TEAM_DAWN)
+	var foe := other.add_hero(SimConst.TEAM_DUSK)
+	other.step({hebe.id: _input(Vector2.ZERO, Vector2(5.0, 0.0), SimConst.BTN_ABILITY_2)})
+	_check(hebe.haste_ticks > 0 and near.haste_ticks > 0, "an area haste speeds up nearby allies")
+	_check(far.haste_ticks == 0 and foe.haste_ticks == 0, "an area haste ignores distant allies and enemies")
+	# La hâte voyage sur le réseau.
+	var copy := SimSnapshot.from_bytes(other.to_snapshot(), arena)
+	var near2: SimHero = copy.heroes[near.id]
+	_check(near2.haste_ticks == near.haste_ticks and near2.haste_pct == 30, "haste survives the network roundtrip")
 
 
 # ---------------------------------------------------------------------------

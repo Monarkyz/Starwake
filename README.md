@@ -4,9 +4,9 @@ Jeu d'arène en équipe, en ligne, pour PC et mobile. Des guerriers en armure, l
 
 Le jeu reprend les grands principes du genre « arène de bataille en ligne » centré sur le jeu d'équipe : expérience partagée par toute l'équipe, talents à choisir par paliers à la place d'une boutique, cartes à objectifs, camps de mercenaires, parties de 10 à 15 minutes. L'univers est original.
 
-![Partie d'entraînement avec les commandes tactiles](docs/jalon-4.png)
+![Partie d'entraînement](docs/jalon-5.png)
 
-## État : jalon 4, PC et mobile
+## État : jalon 5, douze héros
 
 ### Commandes tactiles
 
@@ -39,15 +39,38 @@ Les joueurs sur PC et sur mobile se connectent au même serveur et jouent dans l
 
 Il n'y a pas de version iOS : la fabriquer demande un Mac et un compte développeur Apple.
 
-### Trois héros
+### Douze héros
 
-| Héros | Rôle | Attaque de base | Capacités | Capacité ultime (éveil) |
-|---|---|---|---|---|
-| Théron de la Flèche | Assassin | Tir d'étoile, à distance | Trait sidéral (tir perforant), Pas de comète (ruée) | Pluie d'étoiles : une volée de sept traits |
-| Brontès de l'Écu | Tank | Coup d'écu, au corps à corps | Onde de choc (étourdit), Rempart (bouclier) | Séisme : frappe et étourdit tout autour de lui |
-| Ismène de la Colombe | Soutien | Plume d'argent, à distance | Chant d'aube (soin de zone), Entrave (ralentit) | Aube nouvelle : soigne et protège les alliés proches |
+Quatre héros par rôle, chacun lié à une constellation. Le héros se choisit dans le menu, avant de lancer une partie.
 
-Le héros se choisit dans le menu, avant de lancer une partie.
+**Tanks**
+
+| Héros | Attaque de base | Capacités | Capacité ultime (éveil) |
+|---|---|---|---|
+| Brontès de l'Écu | Coup d'écu | Onde de choc, Rempart | Séisme |
+| Kallias de l'Ourse | Griffes | Charge de l'ourse, Rugissement | Fureur de l'Ourse |
+| Okeanos de la Baleine | Coup de queue | Lame de fond, Carapace | Raz-de-marée |
+| Pholos du Centaure | Coup de lance | Ruade, Galop | Charge du centaure |
+
+**Assassins**
+
+| Héros | Attaque de base | Capacités | Capacité ultime (éveil) |
+|---|---|---|---|
+| Théron de la Flèche | Tir d'étoile | Trait sidéral, Pas de comète | Pluie d'étoiles |
+| Nyx du Corbeau | Serres | Plongeon, Vol de nuit | Tempête de plumes |
+| Ariane de la Couronne | Étincelle | Astre tombant, Éclat | Couronne d'étoiles |
+| Atalante du Lynx | Javelot léger | Lasso, Bond | Triple trait |
+
+**Soutiens**
+
+| Héros | Attaque de base | Capacités | Capacité ultime (éveil) |
+|---|---|---|---|
+| Ismène de la Colombe | Plume d'argent | Chant d'aube, Entrave | Aube nouvelle |
+| Hébé de la Coupe | Goutte d'ambroisie | Nectar, Ivresse divine | Coupe des dieux |
+| Arion du Dauphin | Jet d'écume | Vague porteuse, Ressac | Chant d'Arion |
+| Hestia de l'Autel | Tison | Flamme du foyer, Braises | Feu sacré |
+
+Les capacités couvrent plusieurs mécaniques : tirs (perforants ou non), coups au corps à corps, zones annoncées au sol qui frappent après un court délai, ruées et charges, boucliers, soins de zone, hâte, étourdissement, ralentissement, repoussement, attraction et vol de vie.
 
 ### Talents
 
@@ -67,11 +90,11 @@ Les bots jouent les trois héros et choisissent leurs talents. En entraînement 
 
 ### Déjà en place
 
-- **Les héros** (jalon 3) : les trois héros ci-dessus, leurs talents, l'éther, l'éveil, les rangs d'armures et les bots.
+- **Le socle des héros** (jalon 3) : talents, éther, éveil, rangs d'armures, bots qui complètent les parties.
 - **La carte du sanctuaire** (jalon 2) : deux voies de sbires, des temples à détruire dans l'ordre, le sanctuaire final dont la chute donne la victoire, la relique à canaliser au centre, deux camps de mercenaires, l'expérience d'équipe, les fontaines de soin.
 - **Le socle en ligne** (jalon 1) : serveur dédié qui fait autorité, jusqu'à 6 joueurs (3 contre 3), client qui prédit le déplacement de son héros, interface en français et en anglais.
 
-Ce qui n'existe pas encore : les neuf autres héros, le tutoriel, le matchmaking, la version iOS. Les modèles sont des formes simples en attendant les packs d'assets, et l'équilibrage n'a été réglé que sur des parties entre bots.
+Ce qui n'existe pas encore : le tutoriel, le matchmaking, la version iOS. Les modèles sont des formes simples en attendant les packs d'assets, et l'équilibrage n'a été réglé que sur des parties entre bots.
 
 ## Lancer le jeu
 
@@ -155,7 +178,7 @@ Trois règles tiennent l'ensemble :
 |---|---|
 | Starwake | L'éveil des astres : le moment où un guerrier s'éveille à son énergie |
 | Aube, Crépuscule | Les deux équipes |
-| Théron, Brontès, Ismène | Les trois premiers héros, liés aux constellations de la Flèche, de l'Écu et de la Colombe |
+| Les douze héros | Chacun est lié à une constellation : la Flèche, l'Écu, la Colombe, l'Ourse, le Corbeau, la Coupe, la Baleine, la Couronne, le Dauphin, le Centaure, le Lynx, l'Autel |
 | Éther | L'énergie intérieure d'un héros, qui monte en combattant |
 | Éveil | L'état que déclenche une jauge d'éther pleine, avec la capacité ultime |
 | Bronze, argent, or | Les rangs d'armures, qui suivent le niveau de l'équipe |
@@ -169,7 +192,7 @@ Trois règles tiennent l'ensemble :
 2. **Carte du sanctuaire** (fait) : voies, sbires, temples à franchir, reliques à capturer, camps de mercenaires, expérience d'équipe.
 3. **Trois premiers héros** (fait) : tank, assassin et soutien, avec talents, jauge d'éther, éveil et rangs d'armures ; bots pour compléter les parties.
 4. **Mobile** (fait, à valider sur un vrai téléphone) : commandes tactiles, jeu croisé avec le PC, versions Windows, Linux et Android fabriquées automatiquement.
-5. **Héros 4 à 12**, par lots de trois.
+5. **Héros 4 à 12** (fait) : neuf héros ajoutés, soit trois tanks, trois assassins et trois soutiens.
 6. **Tutoriel scénarisé**.
 
 Décisions prises pour le prototype : univers original, Godot 4, 3 contre 3, déplacement direct sur toutes les plateformes, 3D stylisée low-poly, jeu gratuit avec cosmétiques sans avantage en jeu, français et anglais.

@@ -2,7 +2,7 @@ class_name SimConst
 ## Constantes partagées par la simulation, le serveur et le client.
 
 ## Version du protocole réseau : un client d'une autre version est refusé.
-const PROTOCOL_VERSION := 3
+const PROTOCOL_VERSION := 4
 
 ## Nombre de pas de simulation par seconde (doit suivre physics_ticks_per_second).
 const TICK_RATE := 30
@@ -43,6 +43,9 @@ const REGEN_DELAY := 6.0
 const REGEN_RATE := 0.015
 const FOUNTAIN_RADIUS := 7.0
 const FOUNTAIN_RATE := 0.12
+
+## Durée d'un déplacement forcé (repoussement, attraction), en secondes.
+const PUSH_DURATION := 0.15
 
 # --- Talents ---------------------------------------------------------------
 ## Niveau d'équipe qui ouvre chaque palier de talents.

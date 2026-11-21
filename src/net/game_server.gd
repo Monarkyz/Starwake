@@ -11,8 +11,8 @@ const MAX_INPUT_QUEUE := 5
 ## Délai laissé à un pair connecté pour envoyer sa demande d'entrée.
 const JOIN_TIMEOUT := 5.0
 const BOT_NAMES: Array[String] = ["Orion", "Véga", "Altaïr", "Sirius", "Rigel", "Deneb"]
-## Héros donnés aux bots d'une équipe, dans l'ordre : un tank, un assassin, un soutien.
-const BOT_HEROES: Array[String] = ["scutum", "sagitta", "columba"]
+## Rôles donnés aux bots d'une équipe, dans l'ordre : un tank, un assassin, un soutien.
+const BOT_ROLES: Array[String] = ["ROLE_TANK", "ROLE_ASSASSIN", "ROLE_SUPPORT"]
 
 var world: SimWorld
 var net: NetBridge
@@ -144,18 +144,7 @@ func _log_event(ev: Array) -> void:
 
 
 func _add_bot(team: int) -> void:
-	# Compléter l'équipe avec le premier rôle qui lui manque.
-	var present: Array = []
-	for id in world.heroes:
-		var mate: SimHero = world.heroes[id]
-		if mate.team == team:
-			present.append(mate.def_id)
-	var def_id: String = BOT_HEROES[world.team_size(team) % BOT_HEROES.size()]
-	for candidate in BOT_HEROES:
-		if not present.has(candidate):
-			def_id = candidate
-			break
-	var hero := world.add_hero(team, def_id)
+	var hero := world.add_hero(team, pick_bot_hero(world, team))
 	var brain := BotBrain.new()
 	# Les deux premiers emplacements d'une équipe tiennent chacun une voie, le troisième circule.
 	brain.lane = hero.spawn_slot % 2
@@ -170,6 +159,31 @@ func _add_bot(team: int) -> void:
 			bot_name = candidate
 			break
 	_roster[hero.id] = [bot_name, team, true]
+
+
+## Héros d'un nouveau bot : au hasard parmi ceux du premier rôle qui manque à l'équipe,
+## en évitant les héros déjà pris par ses coéquipiers.
+static func pick_bot_hero(p_world: SimWorld, team: int, rng: RandomNumberGenerator = null) -> String:
+	var taken: Array = []
+	var roles: Array = []
+	for id in p_world.heroes:
+		var mate: SimHero = p_world.heroes[id]
+		if mate.team == team:
+			taken.append(mate.def_id)
+			roles.append(HeroDefs.get_def(mate.def_id)["role_key"])
+	var role: String = BOT_ROLES[p_world.team_size(team) % BOT_ROLES.size()]
+	for candidate in BOT_ROLES:
+		if not roles.has(candidate):
+			role = candidate
+			break
+	var choices: Array = []
+	for def_id: String in HeroDefs.ids_by_role(role):
+		if not taken.has(def_id):
+			choices.append(def_id)
+	if choices.is_empty():
+		choices = HeroDefs.ids_by_role(role)
+	var pick := rng.randi_range(0, choices.size() - 1) if rng != null else randi_range(0, choices.size() - 1)
+	return choices[pick]
 
 
 func _remove_bot(bot: Dictionary) -> void:

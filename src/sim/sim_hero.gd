@@ -3,7 +3,7 @@ extends RefCounted
 ## État d'un héros dans la simulation.
 
 ## Taille d'un héros dans une photographie, en octets.
-const WIRE_SIZE := 60
+const WIRE_SIZE := 62
 
 var id: int = 0
 var team: int = 0
@@ -36,6 +36,9 @@ var stun_ticks: int = 0
 var slow_ticks: int = 0
 ## Ralentissement subi, en pourcentage de vitesse perdue.
 var slow_pct: int = 0
+var haste_ticks: int = 0
+## Hâte reçue, en pourcentage de vitesse gagnée.
+var haste_pct: int = 0
 ## Points de bouclier : absorbent les dégâts avant la vie.
 var shield: float = 0.0
 ## Talent choisi à chaque palier : 0 aucun, 1 ou 2.
@@ -51,6 +54,10 @@ var idle: bool = false
 var shield_ticks: int = 0
 ## Vrai pendant le pas où l'éveil vient d'être déclenché.
 var just_awakened: bool = false
+## Créneau de la ruée en cours (pour ses dégâts au contact), ou -1.
+var dash_slot: int = -1
+## Cibles déjà touchées par la ruée en cours.
+var dash_hits: Array[int] = []
 
 
 func copy() -> SimHero:
@@ -76,6 +83,8 @@ func copy() -> SimHero:
 	h.stun_ticks = stun_ticks
 	h.slow_ticks = slow_ticks
 	h.slow_pct = slow_pct
+	h.haste_ticks = haste_ticks
+	h.haste_pct = haste_pct
 	h.shield = shield
 	h.talents = talents.duplicate()
 	h.spawn_slot = spawn_slot
@@ -83,6 +92,7 @@ func copy() -> SimHero:
 	h.idle = idle
 	h.shield_ticks = shield_ticks
 	h.just_awakened = just_awakened
+	h.dash_slot = dash_slot
 	return h
 
 
@@ -115,6 +125,8 @@ func write(buf: StreamPeerBuffer) -> void:
 	buf.put_u8(clampi(stun_ticks, 0, 255))
 	buf.put_u8(clampi(slow_ticks, 0, 255))
 	buf.put_u8(clampi(slow_pct, 0, 100))
+	buf.put_u8(clampi(haste_ticks, 0, 255))
+	buf.put_u8(clampi(haste_pct, 0, 200))
 	buf.put_u16(clampi(ceili(shield), 0, 0xFFFF))
 	buf.put_u8((talents[0] & 3) | ((talents[1] & 3) << 2) | ((talents[2] & 3) << 4))
 
@@ -144,6 +156,8 @@ static func read(buf: StreamPeerBuffer) -> SimHero:
 	h.stun_ticks = buf.get_u8()
 	h.slow_ticks = buf.get_u8()
 	h.slow_pct = mini(buf.get_u8(), 100)
+	h.haste_ticks = buf.get_u8()
+	h.haste_pct = mini(buf.get_u8(), 200)
 	h.shield = buf.get_u16()
 	var packed := buf.get_u8()
 	h.talents = [mini(packed & 3, 2), mini((packed >> 2) & 3, 2), mini((packed >> 4) & 3, 2)]

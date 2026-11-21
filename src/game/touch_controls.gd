@@ -233,8 +233,9 @@ func _draw_button(slot: int, ability: Dictionary, me: SimHero) -> void:
 		outline = Hud.ETHER_COLOR
 	draw_arc(center, radius, 0.0, TAU, 40, outline, 3.0 if held else 2.0)
 	var name_color := Palette.TEXT if ready else Palette.TEXT_DIM
-	draw_string(_font, center + Vector2(-radius, radius * 0.5 if label != "" else 5.0), tr(ability["name_key"]),
-			HORIZONTAL_ALIGNMENT_CENTER, radius * 2.0, 12, name_color)
+	var ability_name := tr(ability["name_key"])
+	draw_string(_font, center + Vector2(-radius, radius * 0.5 if label != "" else 5.0), ability_name,
+			HORIZONTAL_ALIGNMENT_CENTER, radius * 2.0, 12 if ability_name.length() <= 14 else 10, name_color)
 	if label != "":
 		draw_string(_font, center + Vector2(-radius, 2.0), label, HORIZONTAL_ALIGNMENT_CENTER, radius * 2.0, 22, Color.WHITE)
 	if held and _manual_dir(slot) != Vector2.ZERO:

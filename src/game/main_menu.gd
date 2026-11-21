@@ -11,6 +11,7 @@ var _status: Label
 var _buttons: Array[Button] = []
 var _hero_buttons: Dictionary = {}  # id du héros -> Button
 var _controls_label: Label
+var _hero_detail: Label
 
 
 func _ready() -> void:
@@ -22,11 +23,11 @@ func _ready() -> void:
 	add_child(center)
 
 	var box := VBoxContainer.new()
-	box.custom_minimum_size = Vector2(560.0, 0.0)
-	box.add_theme_constant_override("separation", 10)
+	box.custom_minimum_size = Vector2(600.0, 0.0)
+	box.add_theme_constant_override("separation", 7)
 	center.add_child(box)
 
-	var title := _label("STARWAKE", 60, Palette.GOLD)
+	var title := _label("STARWAKE", 44, Palette.GOLD)
 	title.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 	box.add_child(title)
 	box.add_child(_label("MENU_SUBTITLE", 16, Palette.TEXT_DIM))
@@ -35,32 +36,37 @@ func _ready() -> void:
 	_name_edit.max_length = 16
 	box.add_child(_name_edit)
 
-	# Choix du héros : un bouton par héros, avec son rôle.
-	var heroes := HBoxContainer.new()
-	heroes.add_theme_constant_override("separation", 8)
-	for def_id: String in HeroDefs.ids():
-		var def: Dictionary = HeroDefs.get_def(def_id)
-		var button := Button.new()
-		button.toggle_mode = true
-		button.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
-		button.custom_minimum_size = Vector2(0.0, 58.0)
-		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		button.add_theme_font_size_override("font_size", 13)
-		button.set_meta("name_key", def["name_key"])
-		button.set_meta("role_key", def["role_key"])
-		button.pressed.connect(func() -> void: _select_hero(def_id))
-		heroes.add_child(button)
-		_hero_buttons[def_id] = button
-	box.add_child(heroes)
+	# Choix du héros : une ligne par rôle, un bouton par héros (son prénom).
+	for role_key in HeroDefs.ROLES:
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 6)
+		var role_label := _label(role_key, 13, Palette.TEXT_DIM)
+		role_label.custom_minimum_size = Vector2(84.0, 0.0)
+		role_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+		row.add_child(role_label)
+		for def_id: String in HeroDefs.ids_by_role(role_key):
+			var button := Button.new()
+			button.toggle_mode = true
+			button.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+			button.custom_minimum_size = Vector2(0.0, 38.0)
+			button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			button.add_theme_font_size_override("font_size", 14)
+			button.pressed.connect(func() -> void: _select_hero(def_id))
+			row.add_child(button)
+			_hero_buttons[def_id] = button
+		box.add_child(row)
+	# Sous les boutons : le nom complet du héros choisi et ses capacités.
+	_hero_detail = _label("", 13, Palette.GOLD)
+	_hero_detail.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	_hero_detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	box.add_child(_hero_detail)
 	_select_hero(Settings.hero)
 	box.add_child(_button("MENU_TRAINING", _on_training))
-	box.add_child(_spacer(8.0))
 
 	_address_edit = _line_edit("MENU_ADDRESS_PLACEHOLDER", Settings.address)
 	_address_edit.text_submitted.connect(func(_text: String) -> void: _on_join())
 	box.add_child(_address_edit)
 	box.add_child(_button("MENU_JOIN", _on_join))
-	box.add_child(_spacer(8.0))
 
 	var languages := HBoxContainer.new()
 	languages.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -125,7 +131,15 @@ func _select_hero(def_id: String) -> void:
 func _refresh_hero_buttons() -> void:
 	for id: String in _hero_buttons:
 		var button: Button = _hero_buttons[id]
-		button.text = "%s\n%s" % [tr(button.get_meta("name_key")), tr(button.get_meta("role_key"))]
+		# Tous les noms sont de la forme "Prénom de la Constellation" : le bouton montre le prénom.
+		button.text = tr(HeroDefs.get_def(id)["name_key"]).get_slice(" ", 0)
+	if _hero_detail == null:
+		return
+	var def: Dictionary = HeroDefs.get_def(Settings.hero)
+	var names: Array[String] = []
+	for ability: Dictionary in def["abilities"]:
+		names.append(tr(ability["name_key"]))
+	_hero_detail.text = "%s — %s" % [tr(def["name_key"]), ", ".join(names)]
 
 
 ## Affiche un message d'état déjà traduit (vide pour l'effacer).
@@ -170,7 +184,7 @@ func _line_edit(placeholder: String, text: String) -> LineEdit:
 	var edit := LineEdit.new()
 	edit.placeholder_text = placeholder
 	edit.text = text
-	edit.custom_minimum_size = Vector2(0.0, 42.0)
+	edit.custom_minimum_size = Vector2(0.0, 38.0)
 	edit.alignment = HORIZONTAL_ALIGNMENT_CENTER
 	return edit
 
@@ -178,7 +192,7 @@ func _line_edit(placeholder: String, text: String) -> LineEdit:
 func _button(text: String, on_pressed: Callable) -> Button:
 	var button := Button.new()
 	button.text = text
-	button.custom_minimum_size = Vector2(0.0, 46.0)
+	button.custom_minimum_size = Vector2(0.0, 42.0)
 	button.pressed.connect(on_pressed)
 	_buttons.append(button)
 	return button

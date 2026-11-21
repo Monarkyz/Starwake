@@ -19,6 +19,8 @@ const BEAM_RELIC := 2
 const FX_SLASH := 3
 const FX_RING := 4
 const FX_HEAL := 5
+## Annonce d'une zone qui va frapper à cet endroit.
+const FX_WARN := 6
 
 var arena: SimArena
 var tick: int = 0
@@ -56,6 +58,8 @@ var _wave_timer: float = 0.0
 var _units_by_id: Dictionary = {}
 ## Coups portés par les unités pendant le pas en cours : [type de cible, id, dégâts, équipe].
 var _unit_hits: Array = []
+## Zones à retardement en attente : {due, center, radius, damage, team, owner, stun, slow_pct, slow_ticks}.
+var _zones: Array[Dictionary] = []
 var _match_start_tick: int = 0
 
 
@@ -129,6 +133,7 @@ func step(inputs: Dictionary) -> void:
 	_step_units()
 	_step_structures()
 	_step_projectiles()
+	_step_zones()
 	_step_relic()
 	for team in 2:
 		_grant_xp(team, SimConst.XP_PASSIVE_PER_SECOND * SimConst.DT)
@@ -152,11 +157,16 @@ static func step_hero_local(h: SimHero, cmd: SimInput, p_arena: SimArena, dt: fl
 	var slowed := h.slow_ticks > 0
 	if slowed:
 		h.slow_ticks -= 1
+	var hasted := h.haste_ticks > 0
+	if hasted:
+		h.haste_ticks -= 1
 
 	if h.stun_ticks > 0:
-		# Étourdi : le héros subit, rien d'autre.
+		# Étourdi : le héros subit, rien d'autre. Un déplacement en cours (poussée) se termine.
 		h.stun_ticks -= 1
-		h.dash_left = 0.0
+		if h.dash_left > 0.0:
+			h.pos += h.dash_vel * minf(dt, h.dash_left)
+			h.dash_left = maxf(0.0, h.dash_left - dt)
 		h.pos = p_arena.resolve_circle(h.pos, radius)
 		return
 
@@ -175,13 +185,22 @@ static func step_hero_local(h: SimHero, cmd: SimInput, p_arena: SimArena, dt: fl
 		var ability: Dictionary = abilities[slot]
 		if ability["type"] != "dash":
 			continue
-		if (cmd.buttons & (1 << slot)) == 0 or h.cooldowns[slot] > 0.0 or h.dash_left > 0.0:
+		var is_ultimate: bool = ability.get("awakening", false)
+		if is_ultimate:
+			if not h.just_awakened:
+				continue
+		elif (cmd.buttons & (1 << slot)) == 0 or h.cooldowns[slot] > 0.0 or h.dash_left > 0.0:
 			continue
-		var dir := move.normalized() if move.length_squared() > 0.01 else h.facing
+		# Une ruée "aim" part vers le point visé ; les autres dans le sens de la marche.
+		var dir := h.facing
+		if not ability.get("aim", false) and move.length_squared() > 0.01:
+			dir = move.normalized()
 		var duration: float = ability["duration"]
 		h.dash_vel = dir * (HeroDefs.value(h, slot, "distance") / duration)
 		h.dash_left = duration
-		h.cooldowns[slot] = HeroDefs.value(h, slot, "cooldown")
+		h.dash_slot = slot
+		if not is_ultimate:
+			h.cooldowns[slot] = HeroDefs.value(h, slot, "cooldown")
 
 	if h.dash_left > 0.0:
 		h.pos += h.dash_vel * minf(dt, h.dash_left)
@@ -190,6 +209,8 @@ static func step_hero_local(h: SimHero, cmd: SimInput, p_arena: SimArena, dt: fl
 		var speed := HeroDefs.value(h, -1, "speed")
 		if slowed:
 			speed *= 1.0 - h.slow_pct / 100.0
+		if hasted:
+			speed *= 1.0 + h.haste_pct / 100.0
 		if h.awaken_ticks > 0:
 			speed *= SimConst.AWAKEN_SPEED
 		h.pos += move * speed * dt
@@ -219,6 +240,7 @@ func _step_heroes(inputs: Dictionary) -> void:
 			events.append(["awaken", h.id, 0])
 		if not stunned:
 			_step_hero_actions(h, cmd)
+		_step_dash_contact(h)
 		_step_hero_upkeep(h)
 
 
@@ -244,7 +266,12 @@ func _step_hero_actions(h: SimHero, cmd: SimInput) -> void:
 				var count := maxi(int(HeroDefs.value(h, slot, "count")), 1)
 				var spread := deg_to_rad(HeroDefs.value(h, slot, "spread"))
 				for i in count:
-					var offset := 0.0 if count == 1 else lerpf(-spread * 0.5, spread * 0.5, float(i) / (count - 1))
+					var offset := 0.0
+					if spread >= TAU - 0.001:
+						# Tout autour : les traits se répartissent sur le cercle entier.
+						offset = TAU * i / count
+					elif count > 1:
+						offset = lerpf(-spread * 0.5, spread * 0.5, float(i) / (count - 1))
 					_cast_projectile(h, slot, ability, h.facing.rotated(offset))
 			"melee":
 				_cast_melee(h, slot)
@@ -252,6 +279,10 @@ func _step_hero_actions(h: SimHero, cmd: SimInput) -> void:
 				_give_shield(h, HeroDefs.value(h, slot, "amount") * _power(h), HeroDefs.value(h, slot, "duration"))
 			"heal_area":
 				_cast_heal_area(h, slot, ability, cmd.aim)
+			"zone":
+				_cast_zone(h, slot, ability, cmd.aim)
+			"haste":
+				_cast_haste(h, slot)
 
 
 ## Multiplicateur des dégâts, soins et boucliers d'un héros : niveau d'équipe et éveil.
@@ -280,6 +311,10 @@ func _cast_projectile(h: SimHero, slot: int, ability: Dictionary, dir: Vector2) 
 	if ability.has("slow"):
 		p.slow_pct = roundi(HeroDefs.value(h, slot, "slow") * 100.0)
 		p.slow_ticks = SimConst.ticks(HeroDefs.value(h, slot, "slow_duration"))
+	if ability.has("knockback"):
+		p.knockback = HeroDefs.value(h, slot, "knockback")
+	if ability.has("lifesteal"):
+		p.lifesteal = HeroDefs.value(h, slot, "lifesteal")
 	p.vel = dir * HeroDefs.value(h, slot, "speed")
 	p.pos = h.pos + dir * (hero_radius + p.radius)
 	projectiles.append(p)
@@ -291,7 +326,7 @@ func _cast_melee(h: SimHero, slot: int) -> void:
 	var reach := HeroDefs.value(h, slot, "range")
 	var arc := HeroDefs.value(h, slot, "arc")
 	var amount := HeroDefs.value(h, slot, "damage") * _power(h)
-	var stun := SimConst.ticks(HeroDefs.value(h, slot, "stun")) if ability.has("stun") else 0
+	var effects := _effects_of(h, slot, ability)
 	if arc >= 360.0:
 		beams.append([FX_RING, h.pos, h.pos + Vector2(reach, 0.0)])
 	else:
@@ -302,20 +337,191 @@ func _cast_melee(h: SimHero, slot: int) -> void:
 			continue
 		var other_radius: float = HeroDefs.get_def(other.def_id)["radius"]
 		if _in_arc(h, reach, arc, other.pos, other_radius):
-			_damage_hero(other, amount, h.team, h.id)
-			if stun > 0 and other.alive:
-				other.stun_ticks = maxi(other.stun_ticks, stun)
+			_strike_hero(other, amount, h, effects)
 	for u in units:
 		if not u.alive or u.team == h.team:
 			continue
 		var unit_radius: float = UnitDefs.get_def(u.kind)["radius"]
 		if _in_arc(h, reach, arc, u.pos, unit_radius):
-			_damage_unit(u, amount, h.team, h.id)
-			_add_ether(h, amount * SimConst.ETHER_PER_OTHER_DAMAGE)
+			_strike_unit(u, amount, h, effects)
 	for s in structures:
 		if s.alive and s.team != h.team and _in_arc(h, reach, arc, s.pos, s.radius):
 			_damage_structure(s, amount, h.team)
 			_add_ether(h, amount * SimConst.ETHER_PER_OTHER_DAMAGE)
+
+
+## Effets annexes d'une capacité, talents compris :
+## {stun, slow_pct, slow_ticks, knockback, lifesteal}.
+func _effects_of(h: SimHero, slot: int, ability: Dictionary) -> Dictionary:
+	var effects := {"stun": 0, "slow_pct": 0, "slow_ticks": 0, "knockback": 0.0, "lifesteal": 0.0}
+	if ability.has("stun"):
+		effects["stun"] = SimConst.ticks(HeroDefs.value(h, slot, "stun"))
+	if ability.has("slow"):
+		effects["slow_pct"] = roundi(HeroDefs.value(h, slot, "slow") * 100.0)
+		effects["slow_ticks"] = SimConst.ticks(HeroDefs.value(h, slot, "slow_duration"))
+	if ability.has("knockback"):
+		effects["knockback"] = HeroDefs.value(h, slot, "knockback")
+	if ability.has("lifesteal"):
+		effects["lifesteal"] = HeroDefs.value(h, slot, "lifesteal")
+	return effects
+
+
+## Frappe un héros adverse : dégâts, puis effets s'il a survécu. "source" peut être null.
+func _strike_hero(target: SimHero, amount: float, source: SimHero, effects: Dictionary, from: Vector2 = Vector2.INF) -> void:
+	var team := source.team if source != null else SimConst.TEAM_NEUTRAL
+	var hp_before := target.hp
+	_damage_hero(target, amount, team, source.id if source != null else 0)
+	var lifesteal: float = effects["lifesteal"]
+	if source != null and lifesteal > 0.0 and source.alive:
+		source.hp = minf(source.max_hp, source.hp + (hp_before - target.hp) * lifesteal)
+	if not target.alive:
+		return
+	var stun: int = effects["stun"]
+	if stun > 0:
+		target.stun_ticks = maxi(target.stun_ticks, stun)
+	var slow_ticks: int = effects["slow_ticks"]
+	if slow_ticks > 0:
+		target.slow_ticks = maxi(target.slow_ticks, slow_ticks)
+		target.slow_pct = effects["slow_pct"]
+	var knockback: float = effects["knockback"]
+	if knockback != 0.0:
+		var origin := from
+		if origin == Vector2.INF:
+			origin = source.pos if source != null else target.pos
+		_push_hero(target, origin, knockback)
+
+
+func _strike_unit(u: SimUnit, amount: float, source: SimHero, effects: Dictionary, from: Vector2 = Vector2.INF) -> void:
+	var hp_before := maxf(u.hp, 0.0)
+	_damage_unit(u, amount, source.team, source.id)
+	_add_ether(source, amount * SimConst.ETHER_PER_OTHER_DAMAGE)
+	var lifesteal: float = effects["lifesteal"]
+	if lifesteal > 0.0 and source.alive:
+		source.hp = minf(source.max_hp, source.hp + (hp_before - maxf(u.hp, 0.0)) * lifesteal * 0.5)
+	var knockback: float = effects["knockback"]
+	if u.alive and knockback != 0.0 and u.team != SimConst.TEAM_NEUTRAL:
+		var origin := from if from != Vector2.INF else source.pos
+		var dir := (u.pos - origin).normalized()
+		if dir == Vector2.ZERO:
+			dir = source.facing
+		var unit_radius: float = UnitDefs.get_def(u.kind)["radius"]
+		u.pos = arena.resolve_unit(u.pos + dir * knockback * 0.5, unit_radius)
+
+
+## Déplace un héros de force. distance > 0 : il est repoussé loin de "from" ;
+## distance < 0 : il est attiré vers "from", sans le dépasser.
+func _push_hero(target: SimHero, from: Vector2, distance: float) -> void:
+	var away := target.pos - from
+	var gap := away.length()
+	var dir := away / gap if gap > 0.001 else Vector2.RIGHT
+	var travel := distance
+	if distance < 0.0:
+		travel = -minf(-distance, maxf(gap - 1.5, 0.0))
+	target.dash_vel = dir * (travel / SimConst.PUSH_DURATION)
+	target.dash_left = SimConst.PUSH_DURATION
+	target.dash_slot = -1
+	target.dash_hits.clear()
+
+
+## Ruée offensive : frappe une fois chaque adversaire touché en chemin.
+func _step_dash_contact(h: SimHero) -> void:
+	if h.dash_slot < 0:
+		return
+	var abilities: Array = HeroDefs.get_def(h.def_id)["abilities"]
+	var ability: Dictionary = abilities[h.dash_slot]
+	if ability.has("damage"):
+		var slot := h.dash_slot
+		var amount := HeroDefs.value(h, slot, "damage") * _power(h)
+		var effects := _effects_of(h, slot, ability)
+		var own_radius: float = HeroDefs.get_def(h.def_id)["radius"]
+		for id in heroes:
+			var other: SimHero = heroes[id]
+			if not other.alive or other.team == h.team or h.dash_hits.has(other.id):
+				continue
+			var other_radius: float = HeroDefs.get_def(other.def_id)["radius"]
+			if other.pos.distance_to(h.pos) <= own_radius + other_radius + 0.6:
+				h.dash_hits.append(other.id)
+				_strike_hero(other, amount, h, effects)
+		for u in units:
+			var key := TARGET_KEY + u.id
+			if not u.alive or u.team == h.team or h.dash_hits.has(key):
+				continue
+			var unit_radius: float = UnitDefs.get_def(u.kind)["radius"]
+			if u.pos.distance_to(h.pos) <= own_radius + unit_radius + 0.6:
+				h.dash_hits.append(key)
+				_strike_unit(u, amount, h, effects)
+	if h.dash_left <= 0.0:
+		h.dash_slot = -1
+		h.dash_hits.clear()
+
+
+## Zone à retardement : annoncée au sol, elle frappe après un délai.
+func _cast_zone(h: SimHero, slot: int, ability: Dictionary, aim: Vector2) -> void:
+	var center := h.pos
+	if not ability.get("self", false):
+		center = h.pos + (aim - h.pos).limit_length(HeroDefs.value(h, slot, "range"))
+	var radius := HeroDefs.value(h, slot, "radius")
+	var delay: float = ability["delay"]
+	var zone := _effects_of(h, slot, ability)
+	zone["due"] = tick + SimConst.ticks(delay)
+	zone["center"] = center
+	zone["radius"] = radius
+	zone["damage"] = HeroDefs.value(h, slot, "damage") * _power(h)
+	zone["owner"] = h.id
+	zone["team"] = h.team
+	_zones.append(zone)
+	beams.append([FX_WARN, center, center + Vector2(radius, 0.0)])
+
+
+func _step_zones() -> void:
+	if _zones.is_empty():
+		return
+	var waiting: Array[Dictionary] = []
+	for zone in _zones:
+		if zone["due"] > tick:
+			waiting.append(zone)
+			continue
+		var center: Vector2 = zone["center"]
+		var radius: float = zone["radius"]
+		var amount: float = zone["damage"]
+		var team: int = zone["team"]
+		var owner: SimHero = heroes.get(zone["owner"])
+		beams.append([FX_RING, center, center + Vector2(radius, 0.0)])
+		for id in heroes:
+			var other: SimHero = heroes[id]
+			if other.alive and other.team != team and other.pos.distance_to(center) <= radius:
+				if owner != null:
+					_strike_hero(other, amount, owner, zone, center)
+				else:
+					_damage_hero(other, amount, team, 0)
+		for u in units:
+			if u.alive and u.team != team and u.pos.distance_to(center) <= radius:
+				if owner != null:
+					_strike_unit(u, amount, owner, zone, center)
+				else:
+					_damage_unit(u, amount, team, 0)
+		for s in structures:
+			if s.alive and s.team != team and s.pos.distance_to(center) - s.radius <= radius:
+				_damage_structure(s, amount, team)
+				_add_ether(owner, amount * SimConst.ETHER_PER_OTHER_DAMAGE)
+	_zones = waiting
+
+
+## Hâte : accélère le lanceur, ou tous les alliés autour de lui si la capacité a un rayon.
+func _cast_haste(h: SimHero, slot: int) -> void:
+	var radius := HeroDefs.value(h, slot, "radius")
+	var pct := roundi(HeroDefs.value(h, slot, "haste") * 100.0)
+	var duration := SimConst.ticks(HeroDefs.value(h, slot, "duration"))
+	if radius > 0.0:
+		beams.append([FX_HEAL, h.pos, h.pos + Vector2(radius, 0.0)])
+	for id in heroes:
+		var ally: SimHero = heroes[id]
+		if not ally.alive or ally.team != h.team:
+			continue
+		if ally.id != h.id and ally.pos.distance_to(h.pos) > radius:
+			continue
+		ally.haste_pct = maxi(ally.haste_pct if ally.haste_ticks > 0 else 0, pct)
+		ally.haste_ticks = maxi(ally.haste_ticks, duration)
 
 
 func _in_arc(h: SimHero, reach: float, arc: float, target_pos: Vector2, target_radius: float) -> bool:
@@ -763,17 +969,22 @@ func _step_projectiles() -> void:
 			p.hit_ids.append(hit[1] * TARGET_KEY + target_id)
 			match hit[1]:
 				SimUnit.TARGET_HERO:
-					var victim: SimHero = heroes[target_id]
-					_damage_hero(victim, p.damage, p.team, p.owner_id)
-					if victim.alive:
-						if p.stun_ticks > 0:
-							victim.stun_ticks = maxi(victim.stun_ticks, p.stun_ticks)
-						if p.slow_ticks > 0:
-							victim.slow_ticks = maxi(victim.slow_ticks, p.slow_ticks)
-							victim.slow_pct = p.slow_pct
+					var effects := {"stun": p.stun_ticks, "slow_pct": p.slow_pct, "slow_ticks": p.slow_ticks,
+							"knockback": p.knockback, "lifesteal": p.lifesteal}
+					var shooter: SimHero = heroes.get(p.owner_id)
+					if shooter != null:
+						# Repoussée dans le sens du tir, attirée vers le tireur.
+						var origin := shooter.pos if p.knockback < 0.0 else from
+						_strike_hero(heroes[target_id], p.damage, shooter, effects, origin)
+					else:
+						_damage_hero(heroes[target_id], p.damage, p.team, 0)
 				SimUnit.TARGET_UNIT:
-					_damage_unit(_units_by_id[target_id], p.damage, p.team, p.owner_id)
-					_add_ether(heroes.get(p.owner_id), p.damage * SimConst.ETHER_PER_OTHER_DAMAGE)
+					var unit_shooter: SimHero = heroes.get(p.owner_id)
+					if unit_shooter != null:
+						_strike_unit(_units_by_id[target_id], p.damage, unit_shooter,
+								{"stun": 0, "slow_pct": 0, "slow_ticks": 0, "knockback": maxf(p.knockback, 0.0), "lifesteal": p.lifesteal}, from)
+					else:
+						_damage_unit(_units_by_id[target_id], p.damage, p.team, 0)
 				SimUnit.TARGET_STRUCTURE:
 					# Un bâtiment arrête tous les projectiles, même perforants.
 					_damage_structure(structures[target_id], p.damage, p.team)
@@ -887,7 +1098,9 @@ func _damage_hero(target: SimHero, amount: float, source_team: int, source_hero_
 	target.shield_ticks = 0
 	target.stun_ticks = 0
 	target.slow_ticks = 0
+	target.haste_ticks = 0
 	target.awaken_ticks = 0
+	target.dash_slot = -1
 	target.ether *= 0.5
 	target.deaths += 1
 	if killer != null:
@@ -1024,6 +1237,7 @@ func _setup_match() -> void:
 	units.clear()
 	_units_by_id.clear()
 	projectiles.clear()
+	_zones.clear()
 	beams.clear()
 	team_kills = [0, 0]
 	team_level = [1, 1]
@@ -1055,7 +1269,10 @@ func _place_at_spawn(h: SimHero) -> void:
 	h.shield_ticks = 0
 	h.stun_ticks = 0
 	h.slow_ticks = 0
+	h.haste_ticks = 0
 	h.awaken_ticks = 0
+	h.dash_slot = -1
+	h.dash_hits.clear()
 	h.last_hit_tick = -100000
 	for i in h.cooldowns.size():
 		h.cooldowns[i] = 0.0

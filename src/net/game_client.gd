@@ -313,6 +313,9 @@ func _on_snapshot(data: PackedByteArray) -> void:
 	# qu'il n'a pas encore prises en compte.
 	var before := local.pos
 	var same_life := local.alive and mine.alive
+	# Poussé ou attiré par un adversaire : le serveur impose un déplacement que le client
+	# ne pouvait pas deviner.
+	var pushed := mine.dash_left > 0.0 and (local.dash_left <= 0.0 or not mine.dash_vel.is_equal_approx(local.dash_vel))
 	local = mine.copy()
 	while not _pending.is_empty() and _pending[0].seq <= mine.last_seq:
 		_pending.pop_front()
@@ -321,8 +324,8 @@ func _on_snapshot(data: PackedByteArray) -> void:
 
 	var correction := local.pos - before
 	var error := correction.length()
-	# Une mort ou une réapparition déplace le héros : ce n'est pas une erreur de prédiction.
-	if error > 0.05 and same_life:
+	# Une mort, une réapparition ou une poussée déplace le héros : ce n'est pas une erreur de prédiction.
+	if error > 0.05 and same_life and not pushed:
 		stats["corrections"] += 1
 		stats["max_correction"] = maxf(stats["max_correction"], error)
 	if error > SNAP_DISTANCE:

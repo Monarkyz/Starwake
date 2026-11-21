@@ -55,9 +55,14 @@ func think(me: SimHero, view: Variant) -> SimInput:
 			var gap := me.pos.distance_to(enemy_hero.pos)
 			cmd.aim = enemy_hero.pos
 			cmd.buttons |= _damage_buttons(me, gap, 0.0)
+			cmd.buttons |= _buttons_for(me, "shield") | _buttons_for(me, "haste")
 			if gap < 6.0:
-				cmd.buttons |= _buttons_for(me, "escape")
-			cmd.buttons |= _buttons_for(me, "shield")
+				var escape := _buttons_for(me, "escape")
+				cmd.buttons |= escape
+				if escape != 0 and _escape_is_aimed(me):
+					# Une ruée visée part vers le point visé : viser la fuite, pas l'adversaire.
+					cmd.aim = me.pos + cmd.move.normalized() * 6.0
+					cmd.buttons = escape
 		_heal_allies(me, view, cmd)
 		return _finish(me, cmd)
 
@@ -85,6 +90,9 @@ func _fight_hero(me: SimHero, target: SimHero, cmd: SimInput) -> void:
 		cmd.move = side
 	cmd.aim = target.pos + _aim_error * (1.0 if preferred > 4.0 else 0.2)
 	cmd.buttons |= _damage_buttons(me, dist, target_radius)
+	cmd.buttons |= _engage_buttons(me, dist)
+	if dist < 10.0:
+		cmd.buttons |= _buttons_for(me, "haste")
 	if me.hp < me.max_hp * 0.7:
 		cmd.buttons |= _buttons_for(me, "shield")
 	if me.ether >= SimConst.ETHER_MAX and dist < 9.0:
@@ -100,6 +108,25 @@ func _damage_buttons(me: SimHero, dist: float, target_radius: float) -> int:
 		if ability.get("ai", "") == "damage" and dist - target_radius <= HeroDefs.value(me, slot, "range"):
 			buttons |= 1 << slot
 	return buttons
+
+
+## Ruées d'engagement : à lancer quand l'adversaire est hors d'atteinte mais à portée de ruée.
+func _engage_buttons(me: SimHero, dist: float) -> int:
+	var buttons := 0
+	var abilities: Array = HeroDefs.get_def(me.def_id)["abilities"]
+	for slot in abilities.size():
+		var ability: Dictionary = abilities[slot]
+		if ability.get("ai", "") == "engage" and dist > 2.8 and dist < HeroDefs.value(me, slot, "distance") + 1.5:
+			buttons |= 1 << slot
+	return buttons
+
+
+func _escape_is_aimed(me: SimHero) -> bool:
+	var abilities: Array = HeroDefs.get_def(me.def_id)["abilities"]
+	for ability: Dictionary in abilities:
+		if ability.get("ai", "") == "escape" and ability.get("aim", false):
+			return true
+	return false
 
 
 ## Boutons des capacités ayant le rôle donné (voir "ai" dans HeroDefs).
@@ -132,6 +159,9 @@ func _heal_allies(me: SimHero, view: Variant, cmd: SimInput) -> void:
 		if ability.get("ai", "") != "heal" or me.cooldowns[slot] > 0.0:
 			continue
 		var reach := HeroDefs.value(me, slot, "range") + HeroDefs.value(me, slot, "radius") * 0.5
+		if ability.get("self", false):
+			# Soin centré sur le héros : il suffit qu'un allié blessé soit dans la zone.
+			reach = HeroDefs.value(me, slot, "radius")
 		var worst: SimHero = null
 		var worst_ratio := 0.7
 		for id: int in view.heroes:

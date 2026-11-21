@@ -15,6 +15,7 @@ var _rank: int = -1
 var _shield: MeshInstance3D
 var _aura: MeshInstance3D
 var _stun: MeshInstance3D
+var _ring: MeshInstance3D
 var _time: float = 0.0
 
 
@@ -47,6 +48,10 @@ func setup(team: int, is_local: bool, def_id: String) -> void:
 			height = _build_tank(skin)
 		"support":
 			height = _build_support(skin)
+		"duelist":
+			height = _build_duelist(skin)
+		"mage":
+			height = _build_mage(skin)
 		_:
 			height = _build_archer(skin)
 
@@ -55,7 +60,8 @@ func setup(team: int, is_local: bool, def_id: String) -> void:
 	ring.outer_radius = 0.86 if is_local else 0.72
 	ring.rings = 24
 	ring.ring_segments = 6
-	_add_mesh(ring, _glow, Vector3(0.0, 0.04, 0.0)).scale = Vector3(1.0, 0.15, 1.0)
+	_ring = _add_mesh(ring, _glow, Vector3(0.0, 0.04, 0.0))
+	_ring.scale = Vector3(1.0, 0.15, 1.0)
 
 	# Bouclier : une bulle translucide autour du héros.
 	var bubble_material := StandardMaterial3D.new()
@@ -110,6 +116,8 @@ func apply(h: SimHero, delta: float, rank: int) -> void:
 	_flash = maxf(0.0, _flash - delta)
 	_cloth.emission_enabled = _flash > 0.0
 	_shield.visible = h.shield > 0.0
+	# Hâte : l'anneau au sol s'élargit.
+	_ring.scale = Vector3(1.35, 0.15, 1.35) if h.haste_ticks > 0 else Vector3(1.0, 0.15, 1.0)
 	_aura.visible = h.is_awakened()
 	if _aura.visible:
 		_aura.scale = Vector3.ONE * (1.0 + 0.08 * sin(_time * 9.0))
@@ -179,6 +187,37 @@ func _build_support(skin: Material) -> float:
 	halo.ring_segments = 5
 	_add_mesh(halo, _glow, Vector3(0.0, 2.05, 0.0)).scale = Vector3(1.0, 0.4, 1.0)
 	return 1.92
+
+
+func _build_duelist(skin: Material) -> float:
+	# Silhouette fine, penchée vers l'avant, une lame dans chaque main.
+	_capsule(0.36, 1.45, Vector3(0.0, 0.78, 0.0))
+	_head(skin, 1.72)
+	_box(Vector3(0.5, 0.42, 0.66), Vector3(0.04, 1.2, 0.0), _armor)
+	_box(Vector3(0.3, 0.2, 0.3), Vector3(0.0, 1.45, 0.45), _armor)
+	_box(Vector3(0.3, 0.2, 0.3), Vector3(0.0, 1.45, -0.45), _armor)
+	_box(Vector3(0.75, 0.05, 0.1), Vector3(0.62, 1.0, 0.42), _glow)
+	_box(Vector3(0.75, 0.05, 0.1), Vector3(0.62, 1.0, -0.42), _glow)
+	return 1.99
+
+
+func _build_mage(skin: Material) -> float:
+	# Robe droite, col d'armure, et un astre qui flotte devant.
+	var robe := CylinderMesh.new()
+	robe.top_radius = 0.34
+	robe.bottom_radius = 0.5
+	robe.height = 1.4
+	robe.radial_segments = 8
+	_add_mesh(robe, _cloth, Vector3(0.0, 0.7, 0.0))
+	_head(skin, 1.7)
+	_box(Vector3(0.5, 0.28, 0.72), Vector3(0.0, 1.36, 0.0), _armor)
+	var orb := SphereMesh.new()
+	orb.radius = 0.2
+	orb.height = 0.4
+	orb.radial_segments = 8
+	orb.rings = 4
+	_add_mesh(orb, _glow, Vector3(0.7, 1.3, 0.0))
+	return 1.97
 
 
 func _capsule(radius: float, height: float, at: Vector3) -> void:
