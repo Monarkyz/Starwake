@@ -85,15 +85,15 @@ const DEFS: Dictionary = {
 		"abilities": [
 			{
 				"name_key": "ABILITY_SCUTUM_ATTACK", "type": "melee", "ai": "damage",
-				"cooldown": 0.9, "damage": 110.0, "range": 2.6, "arc": 120.0,
+				"cooldown": 1.0, "damage": 110.0, "range": 2.6, "arc": 120.0,
 			},
 			{
 				"name_key": "ABILITY_SCUTUM_SHOCK", "type": "melee", "ai": "damage",
-				"cooldown": 8.0, "damage": 150.0, "range": 4.5, "arc": 100.0, "stun": 1.0,
+				"cooldown": 10.0, "damage": 150.0, "range": 4.5, "arc": 100.0, "stun": 1.0,
 			},
 			{
 				"name_key": "ABILITY_SCUTUM_WALL", "type": "shield", "ai": "shield",
-				"cooldown": 12.0, "amount": 450.0, "duration": 4.0,
+				"cooldown": 14.0, "amount": 450.0, "duration": 4.0,
 			},
 			{
 				"name_key": "ABILITY_SCUTUM_ULT", "type": "melee", "ai": "awaken", "awakening": true,
@@ -161,13 +161,13 @@ const DEFS: Dictionary = {
 		"name_key": "HERO_URSA",
 		"role_key": "ROLE_TANK",
 		"look": "tank",
-		"max_hp": 1600.0,
+		"max_hp": 1700.0,
 		"speed": 5.8,
 		"radius": 0.75,
 		"preferred_range": 1.6,
 		"abilities": [
-			{"name_key": "ABILITY_URSA_ATTACK", "type": "melee", "ai": "damage", "cooldown": 0.8, "damage": 95.0, "range": 2.6, "arc": 120.0},
-			{"name_key": "ABILITY_URSA_CHARGE", "type": "dash", "ai": "engage", "cooldown": 9.0, "distance": 7.0, "duration": 0.25, "damage": 140.0, "knockback": 2.5},
+			{"name_key": "ABILITY_URSA_ATTACK", "type": "melee", "ai": "damage", "cooldown": 0.8, "damage": 105.0, "range": 2.6, "arc": 120.0},
+			{"name_key": "ABILITY_URSA_CHARGE", "type": "dash", "ai": "engage", "cooldown": 8.0, "distance": 7.0, "duration": 0.25, "damage": 140.0, "knockback": 2.5},
 			{"name_key": "ABILITY_URSA_ROAR", "type": "melee", "ai": "damage", "cooldown": 10.0, "damage": 90.0, "range": 4.0, "arc": 360.0, "slow": 0.4, "slow_duration": 2.5},
 			{"name_key": "ABILITY_URSA_ULT", "type": "heal_area", "ai": "awaken", "awakening": true, "cooldown": 0.0, "amount": 500.0, "range": 0.0, "radius": 1.0, "self": true, "shield": 350.0},
 		],
@@ -195,8 +195,8 @@ const DEFS: Dictionary = {
 		"radius": 0.55,
 		"preferred_range": 1.5,
 		"abilities": [
-			{"name_key": "ABILITY_CORVUS_ATTACK", "type": "melee", "ai": "damage", "cooldown": 0.55, "damage": 85.0, "range": 2.4, "arc": 100.0, "lifesteal": 0.2},
-			{"name_key": "ABILITY_CORVUS_DIVE", "type": "dash", "ai": "engage", "aim": true, "cooldown": 7.0, "distance": 6.5, "duration": 0.18, "damage": 180.0},
+			{"name_key": "ABILITY_CORVUS_ATTACK", "type": "melee", "ai": "damage", "cooldown": 0.55, "damage": 92.0, "range": 2.4, "arc": 100.0, "lifesteal": 0.2},
+			{"name_key": "ABILITY_CORVUS_DIVE", "type": "dash", "ai": "engage", "aim": true, "cooldown": 7.0, "distance": 6.5, "duration": 0.18, "damage": 200.0},
 			{"name_key": "ABILITY_CORVUS_NIGHT", "type": "haste", "ai": "haste", "cooldown": 11.0, "haste": 0.4, "duration": 3.0, "radius": 0.0},
 			{"name_key": "ABILITY_CORVUS_ULT", "type": "volley", "ai": "awaken", "awakening": true, "cooldown": 0.0, "damage": 150.0, "speed": 26.0, "range": 7.0, "radius": 0.3, "pierce": true, "count": 12.0, "spread": 360.0},
 		],
@@ -224,9 +224,9 @@ const DEFS: Dictionary = {
 		"radius": 0.55,
 		"preferred_range": 8.0,
 		"abilities": [
-			{"name_key": "ABILITY_CRATER_ATTACK", "type": "projectile", "ai": "damage", "cooldown": 0.7, "damage": 60.0, "speed": 22.0, "range": 9.5, "radius": 0.22, "pierce": false},
-			{"name_key": "ABILITY_CRATER_NECTAR", "type": "heal_area", "ai": "heal", "cooldown": 5.0, "amount": 160.0, "range": 9.0, "radius": 2.6},
-			{"name_key": "ABILITY_CRATER_HASTE", "type": "haste", "ai": "haste", "cooldown": 12.0, "haste": 0.3, "duration": 3.0, "radius": 6.0},
+			{"name_key": "ABILITY_CRATER_ATTACK", "type": "projectile", "ai": "damage", "cooldown": 0.7, "damage": 66.0, "speed": 22.0, "range": 9.5, "radius": 0.22, "pierce": false},
+			{"name_key": "ABILITY_CRATER_NECTAR", "type": "heal_area", "ai": "heal", "cooldown": 5.0, "amount": 190.0, "range": 9.0, "radius": 2.6},
+			{"name_key": "ABILITY_CRATER_HASTE", "type": "haste", "ai": "haste", "cooldown": 11.0, "haste": 0.35, "duration": 3.0, "radius": 6.0},
 			{"name_key": "ABILITY_CRATER_ULT", "type": "heal_area", "ai": "awaken", "awakening": true, "cooldown": 0.0, "amount": 250.0, "range": 0.0, "radius": 9.0, "self": true, "shield": 400.0},
 		],
 		"talents": [
@@ -248,12 +248,12 @@ const DEFS: Dictionary = {
 		"name_key": "HERO_CETUS",
 		"role_key": "ROLE_TANK",
 		"look": "tank",
-		"max_hp": 1900.0,
+		"max_hp": 2000.0,
 		"speed": 5.6,
 		"radius": 0.85,
 		"preferred_range": 1.7,
 		"abilities": [
-			{"name_key": "ABILITY_CETUS_ATTACK", "type": "melee", "ai": "damage", "cooldown": 1.0, "damage": 120.0, "range": 2.8, "arc": 130.0},
+			{"name_key": "ABILITY_CETUS_ATTACK", "type": "melee", "ai": "damage", "cooldown": 1.0, "damage": 132.0, "range": 2.8, "arc": 130.0},
 			{"name_key": "ABILITY_CETUS_WAVE", "type": "projectile", "ai": "damage", "cooldown": 8.0, "damage": 150.0, "speed": 14.0, "range": 10.0, "radius": 0.9, "pierce": true, "knockback": 3.0},
 			{"name_key": "ABILITY_CETUS_SHELL", "type": "shield", "ai": "shield", "cooldown": 13.0, "amount": 550.0, "duration": 4.0},
 			{"name_key": "ABILITY_CETUS_ULT", "type": "zone", "ai": "awaken", "awakening": true, "cooldown": 0.0, "damage": 280.0, "range": 0.0, "radius": 7.0, "delay": 0.8, "self": true, "stun": 1.2},
@@ -311,9 +311,9 @@ const DEFS: Dictionary = {
 		"radius": 0.55,
 		"preferred_range": 7.5,
 		"abilities": [
-			{"name_key": "ABILITY_DELPHINUS_ATTACK", "type": "projectile", "ai": "damage", "cooldown": 0.7, "damage": 62.0, "speed": 22.0, "range": 9.5, "radius": 0.22, "pierce": false},
+			{"name_key": "ABILITY_DELPHINUS_ATTACK", "type": "projectile", "ai": "damage", "cooldown": 0.7, "damage": 68.0, "speed": 22.0, "range": 9.5, "radius": 0.22, "pierce": false},
 			{"name_key": "ABILITY_DELPHINUS_WAVE", "type": "heal_area", "ai": "heal", "cooldown": 7.0, "amount": 200.0, "range": 0.0, "radius": 5.5, "self": true},
-			{"name_key": "ABILITY_DELPHINUS_SURF", "type": "projectile", "ai": "damage", "cooldown": 9.0, "damage": 90.0, "speed": 20.0, "range": 11.0, "radius": 0.6, "pierce": false, "knockback": 4.5},
+			{"name_key": "ABILITY_DELPHINUS_SURF", "type": "projectile", "ai": "damage", "cooldown": 9.0, "damage": 115.0, "speed": 20.0, "range": 11.0, "radius": 0.6, "pierce": false, "knockback": 4.5},
 			{"name_key": "ABILITY_DELPHINUS_ULT", "type": "haste", "ai": "awaken", "awakening": true, "cooldown": 0.0, "haste": 0.5, "duration": 5.0, "radius": 9.0},
 		],
 		"talents": [
@@ -369,8 +369,8 @@ const DEFS: Dictionary = {
 		"radius": 0.55,
 		"preferred_range": 8.0,
 		"abilities": [
-			{"name_key": "ABILITY_LYNX_ATTACK", "type": "projectile", "ai": "damage", "cooldown": 0.5, "damage": 70.0, "speed": 26.0, "range": 9.5, "radius": 0.2, "pierce": false},
-			{"name_key": "ABILITY_LYNX_LASSO", "type": "projectile", "ai": "damage", "cooldown": 10.0, "damage": 110.0, "speed": 26.0, "range": 11.0, "radius": 0.4, "pierce": false, "knockback": -5.0},
+			{"name_key": "ABILITY_LYNX_ATTACK", "type": "projectile", "ai": "damage", "cooldown": 0.5, "damage": 76.0, "speed": 26.0, "range": 9.5, "radius": 0.2, "pierce": false},
+			{"name_key": "ABILITY_LYNX_LASSO", "type": "projectile", "ai": "damage", "cooldown": 9.0, "damage": 130.0, "speed": 26.0, "range": 11.0, "radius": 0.4, "pierce": false, "knockback": -5.0},
 			{"name_key": "ABILITY_LYNX_LEAP", "type": "dash", "ai": "escape", "cooldown": 7.0, "distance": 6.0, "duration": 0.2},
 			{"name_key": "ABILITY_LYNX_ULT", "type": "volley", "ai": "awaken", "awakening": true, "cooldown": 0.0, "damage": 300.0, "speed": 32.0, "range": 15.0, "radius": 0.35, "pierce": true, "count": 3.0, "spread": 16.0, "stun": 1.0},
 		],
