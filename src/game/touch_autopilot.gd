@@ -11,6 +11,7 @@ const BUTTON_FINGER := 1
 var controls: TouchControls
 var _input := TouchInput.new()
 var _brain := BotBrain.new()
+var _tutorial_pilot := TutorialPilot.new()
 var _stick_down: bool = false
 var _attack_down: bool = false
 var _ticks: int = 0
@@ -29,6 +30,8 @@ func sample(client: GameClient) -> SimInput:
 		client.choose_talent(randi_range(1, 2))
 
 	var wanted := _brain.think(me, snap)
+	if client.tutorial_step >= 0:
+		wanted = _tutorial_pilot.think(me, snap, client.tutorial_step)
 	_drive_stick(wanted.move)
 	var aim_dir := (wanted.aim - me.pos).normalized()
 	_drive_attack((wanted.buttons & SimConst.BTN_ATTACK) != 0, aim_dir)

@@ -7,7 +7,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 
 msgid "MENU_SUBTITLE"
-msgstr "Prototype — jalon 5 : douze héros"
+msgstr "Prototype — jalon 6 : le tutoriel"
 
 msgid "MENU_NAME_PLACEHOLDER"
 msgstr "Ton nom"
@@ -779,3 +779,63 @@ msgstr "Brasier"
 
 msgid "TALENT_ARA_3B_DESC"
 msgstr "La zone de Braises est 30 % plus large."
+
+msgid "MENU_TUTORIAL"
+msgstr "Tutoriel"
+
+msgid "HUD_TUTORIAL_STEP"
+msgstr "Tutoriel — étape %d sur %d"
+
+msgid "HUD_TUTORIAL_DONE"
+msgstr "Tutoriel terminé"
+
+msgid "TUTORIAL_0"
+msgstr "Les astres s'éveillent. Chaque héros porte l'armure d'une constellation et défend le sanctuaire de son camp. Tu es Théron de la Flèche, de l'équipe de l'Aube. Déplace-toi avec ZQSD jusqu'au cercle lumineux."
+
+msgid "TUTORIAL_0_TOUCH"
+msgstr "Les astres s'éveillent. Chaque héros porte l'armure d'une constellation et défend le sanctuaire de son camp. Tu es Théron de la Flèche, de l'équipe de l'Aube. Pose le pouce gauche sur l'écran et fais-le glisser pour rejoindre le cercle lumineux."
+
+msgid "TUTORIAL_1"
+msgstr "Vise avec la souris et maintiens le clic gauche pour lancer ton Tir d'étoile. Détruis les trois mannequins."
+
+msgid "TUTORIAL_1_TOUCH"
+msgstr "Maintiens le gros bouton pour lancer ton Tir d'étoile : il vise tout seul la cible la plus proche. Détruis les trois mannequins."
+
+msgid "TUTORIAL_2"
+msgstr "Le Trait sidéral traverse tout ce qu'il touche. Place-toi dans l'alignement des trois mannequins, vise et fais un clic droit."
+
+msgid "TUTORIAL_2_TOUCH"
+msgstr "Le Trait sidéral traverse tout ce qu'il touche. Touche son bouton, fais glisser le doigt pour viser dans l'alignement des mannequins, puis relâche."
+
+msgid "TUTORIAL_3"
+msgstr "Le Pas de comète est une ruée : elle sert à esquiver un tir ou à rattraper un adversaire. Appuie sur Espace."
+
+msgid "TUTORIAL_3_TOUCH"
+msgstr "Le Pas de comète est une ruée : elle sert à esquiver un tir ou à rattraper un adversaire. Touche son bouton."
+
+msgid "TUTORIAL_4"
+msgstr "En combattant, tu remplis ta jauge d'éther, la barre bleue sous ta vie. Elle est pleine : appuie sur R pour t'éveiller. Ta capacité ultime part aussitôt, et tu frappes plus fort pendant huit secondes. Vaincs le gardien."
+
+msgid "TUTORIAL_4_TOUCH"
+msgstr "En combattant, tu remplis ta jauge d'éther, la barre bleue sous ta vie. Elle est pleine : touche le bouton d'éveil. Ta capacité ultime part aussitôt, et tu frappes plus fort pendant huit secondes. Vaincs le gardien."
+
+msgid "TUTORIAL_5"
+msgstr "L'expérience est commune à toute l'équipe. La tienne vient de passer au niveau 3 : choisis un talent avec la touche 1 ou 2. D'autres choix viendront aux niveaux 6 et 10."
+
+msgid "TUTORIAL_5_TOUCH"
+msgstr "L'expérience est commune à toute l'équipe. La tienne vient de passer au niveau 3 : touche le talent de ton choix. D'autres choix viendront aux niveaux 6 et 10."
+
+msgid "TUTORIAL_6"
+msgstr "Un temple barre la route. Il tire sur tout ce qui entre dans son cercle, mais vise les sbires avant les héros. Attends ta vague de sbires, avance avec elle et détruis le temple."
+
+msgid "TUTORIAL_7"
+msgstr "La relique est apparue sur l'autel. Va dessus et reste immobile cinq secondes pour la canaliser : son onde frappera le bâtiment adverse le plus avancé."
+
+msgid "TUTORIAL_8"
+msgstr "Le temple est tombé : le sanctuaire adverse est à découvert. Détruis-le pour remporter la partie."
+
+msgid "TUTORIAL_9"
+msgstr "Tu connais l'essentiel. Une vraie partie se joue à trois contre trois, sur deux voies, avec douze héros au choix. Appuie sur Échap pour revenir au menu."
+
+msgid "TUTORIAL_9_TOUCH"
+msgstr "Tu connais l'essentiel. Une vraie partie se joue à trois contre trois, sur deux voies, avec douze héros au choix. Touche Menu pour revenir au menu."

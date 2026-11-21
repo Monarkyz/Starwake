@@ -4,6 +4,7 @@ extends RefCounted
 ## Sert aux tests de bout en bout (client sans écran).
 
 var _brain := BotBrain.new()
+var _tutorial_pilot := TutorialPilot.new()
 var _ticks: int = 0
 
 
@@ -17,4 +18,6 @@ func sample(client: GameClient) -> SimInput:
 	_ticks += 1
 	if _ticks % SimConst.TICK_RATE == 0 and client.pending_talent_tier() >= 0:
 		client.choose_talent(randi_range(1, 2))
+	if client.tutorial_step >= 0:
+		return _tutorial_pilot.think(client.local, snap, client.tutorial_step)
 	return _brain.think(client.local, snap)

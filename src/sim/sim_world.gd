@@ -51,6 +51,11 @@ var relics_taken: int = 0
 ##   awaken(héros)
 var events: Array = []
 
+## Règles que le tutoriel coupe pour dérouler son propre scénario.
+var auto_waves: bool = true
+var passive_xp: bool = true
+var auto_relic: bool = true
+
 var _next_hero_id: int = 1
 var _next_unit_id: int = 1
 var _next_projectile_id: int = 1
@@ -135,8 +140,9 @@ func step(inputs: Dictionary) -> void:
 	_step_projectiles()
 	_step_zones()
 	_step_relic()
-	for team in 2:
-		_grant_xp(team, SimConst.XP_PASSIVE_PER_SECOND * SimConst.DT)
+	if passive_xp:
+		for team in 2:
+			_grant_xp(team, SimConst.XP_PASSIVE_PER_SECOND * SimConst.DT)
 	_remove_dead_units()
 
 
@@ -588,7 +594,7 @@ func _step_hero_upkeep(h: SimHero) -> void:
 # ---------------------------------------------------------------------------
 
 func _step_waves() -> void:
-	if arena.lanes.is_empty():
+	if arena.lanes.is_empty() or not auto_waves:
 		return
 	_wave_timer -= SimConst.DT
 	if _wave_timer > 0.0:
@@ -599,14 +605,7 @@ func _step_waves() -> void:
 		return
 	for lane in arena.lanes.size():
 		for team in 2:
-			var path := arena.lane_path(lane, team)
-			var heading := (path[1] - path[0]).normalized()
-			for entry: Array in UnitDefs.WAVE:
-				var offset: Vector2 = entry[1]
-				var u := _spawn_unit(entry[0], team, path[0] + offset - heading * absf(offset.y))
-				u.path = path
-				u.wp = 1
-				u.offset = offset
+			spawn_wave(lane, team)
 
 
 func _step_camps() -> void:
@@ -1023,11 +1022,10 @@ func _step_relic() -> void:
 		for id in heroes:
 			var h: SimHero = heroes[id]
 			h.channeling = false
-		relic_timer -= SimConst.DT
-		if relic_timer <= 0.0:
-			relic_active = true
-			relic_progress = [0.0, 0.0]
-			events.append(["relic_spawn", 0, 0])
+		if auto_relic:
+			relic_timer -= SimConst.DT
+			if relic_timer <= 0.0:
+				spawn_relic()
 		return
 
 	var channeling: Array[bool] = [false, false]
@@ -1047,6 +1045,32 @@ func _step_relic() -> void:
 		if relic_progress[team] >= 1.0:
 			_capture_relic(team)
 			return
+
+
+## Fait apparaître la relique sur l'autel.
+func spawn_relic() -> void:
+	relic_active = true
+	relic_timer = 0.0
+	relic_progress = [0.0, 0.0]
+	events.append(["relic_spawn", 0, 0])
+
+
+## Envoie une vague de sbires d'une équipe sur une voie, quel que soit le minuteur.
+func spawn_wave(lane: int, team: int) -> void:
+	var path := arena.lane_path(lane, team)
+	var heading := (path[1] - path[0]).normalized()
+	for entry: Array in UnitDefs.WAVE:
+		var offset: Vector2 = entry[1]
+		var u := _spawn_unit(entry[0], team, path[0] + offset - heading * absf(offset.y))
+		if u != null:
+			u.path = path
+			u.wp = 1
+			u.offset = offset
+
+
+## Pose une unité immobile (mannequin, gardien du tutoriel).
+func spawn_static_unit(kind: int, team: int, pos: Vector2) -> SimUnit:
+	return _spawn_unit(kind, team, pos)
 
 
 ## L'onde de la relique frappe, sur chaque voie, le bâtiment adverse le plus avancé.

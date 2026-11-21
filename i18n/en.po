@@ -7,7 +7,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 
 msgid "MENU_SUBTITLE"
-msgstr "Prototype — milestone 5: twelve heroes"
+msgstr "Prototype — milestone 6: the tutorial"
 
 msgid "MENU_NAME_PLACEHOLDER"
 msgstr "Your name"
@@ -779,3 +779,63 @@ msgstr "Blaze"
 
 msgid "TALENT_ARA_3B_DESC"
 msgstr "Embers's area is 30% wider."
+
+msgid "MENU_TUTORIAL"
+msgstr "Tutorial"
+
+msgid "HUD_TUTORIAL_STEP"
+msgstr "Tutorial — step %d of %d"
+
+msgid "HUD_TUTORIAL_DONE"
+msgstr "Tutorial complete"
+
+msgid "TUTORIAL_0"
+msgstr "The stars are waking. Every hero wears the armor of a constellation and defends their side's sanctuary. You are Theron of the Arrow, of team Dawn. Move with WASD to the glowing circle."
+
+msgid "TUTORIAL_0_TOUCH"
+msgstr "The stars are waking. Every hero wears the armor of a constellation and defends their side's sanctuary. You are Theron of the Arrow, of team Dawn. Put your left thumb on the screen and drag it to reach the glowing circle."
+
+msgid "TUTORIAL_1"
+msgstr "Aim with the mouse and hold the left button to fire your Star Shot. Destroy the three dummies."
+
+msgid "TUTORIAL_1_TOUCH"
+msgstr "Hold the big button to fire your Star Shot: it aims at the nearest target by itself. Destroy the three dummies."
+
+msgid "TUTORIAL_2"
+msgstr "The Sidereal Bolt pierces everything it hits. Line yourself up with the three dummies, aim and right-click."
+
+msgid "TUTORIAL_2_TOUCH"
+msgstr "The Sidereal Bolt pierces everything it hits. Touch its button, drag your finger to aim along the line of dummies, then release."
+
+msgid "TUTORIAL_3"
+msgstr "Comet Step is a dash: use it to dodge a shot or to catch an enemy. Press Space."
+
+msgid "TUTORIAL_3_TOUCH"
+msgstr "Comet Step is a dash: use it to dodge a shot or to catch an enemy. Touch its button."
+
+msgid "TUTORIAL_4"
+msgstr "Fighting fills your ether gauge, the blue bar under your health. It is full: press R to awaken. Your ultimate fires at once, and you hit harder for eight seconds. Defeat the guardian."
+
+msgid "TUTORIAL_4_TOUCH"
+msgstr "Fighting fills your ether gauge, the blue bar under your health. It is full: touch the awakening button. Your ultimate fires at once, and you hit harder for eight seconds. Defeat the guardian."
+
+msgid "TUTORIAL_5"
+msgstr "Experience is shared by the whole team. Yours has just reached level 3: pick a talent with key 1 or 2. More choices come at levels 6 and 10."
+
+msgid "TUTORIAL_5_TOUCH"
+msgstr "Experience is shared by the whole team. Yours has just reached level 3: touch the talent you want. More choices come at levels 6 and 10."
+
+msgid "TUTORIAL_6"
+msgstr "A temple blocks the way. It fires at anything entering its circle, but targets minions before heroes. Wait for your minion wave, advance with it and destroy the temple."
+
+msgid "TUTORIAL_7"
+msgstr "The relic has appeared on the altar. Step onto it and stand still for five seconds to channel it: its wave will strike the most advanced enemy building."
+
+msgid "TUTORIAL_8"
+msgstr "The temple has fallen: the enemy sanctuary is exposed. Destroy it to win the match."
+
+msgid "TUTORIAL_9"
+msgstr "You know the essentials. A real match is three against three, on two lanes, with twelve heroes to choose from. Press Esc to return to the menu."
+
+msgid "TUTORIAL_9_TOUCH"
+msgstr "You know the essentials. A real match is three against three, on two lanes, with twelve heroes to choose from. Touch Menu to return to the menu."

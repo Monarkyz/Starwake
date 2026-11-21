@@ -27,6 +27,8 @@ var my_hero_id: int = 0
 var local: SimHero
 var roster: Dictionary = {}  # hero_id -> [nom, équipe, est_un_bot]
 var reject_reason: String = ""
+## Étape du tutoriel en cours, ou -1 hors tutoriel.
+var tutorial_step: int = -1
 ## Objet doté de sample(client) -> SimInput : clavier/souris, tactile ou pilote automatique.
 var input_source: RefCounted
 var stats: Dictionary = {"snapshots": 0, "corrections": 0, "max_correction": 0.0, "max_units": 0, "moves": 0, "actions": 0}
@@ -258,6 +260,9 @@ func _on_server_disconnected() -> void:
 
 func _on_welcomed(info: Dictionary) -> void:
 	my_hero_id = int(info.get("hero_id", 0))
+	# Le serveur indique sa carte : le client construit la même.
+	arena = SimArena.make(str(info.get("map", SimArena.MAP_SANCTUARY)))
+	_structures_alive.clear()
 	_set_state(State.PLAYING)
 
 
@@ -274,6 +279,8 @@ func _on_roster(new_roster: Dictionary) -> void:
 func _on_events(events: Array) -> void:
 	for ev: Variant in events:
 		if typeof(ev) == TYPE_ARRAY and ev.size() == 3 and typeof(ev[0]) == TYPE_STRING:
+			if ev[0] == "tutorial":
+				tutorial_step = int(ev[1])
 			game_event.emit(ev[0], int(ev[1]), int(ev[2]))
 
 

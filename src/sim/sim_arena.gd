@@ -27,14 +27,63 @@ var altar: Vector2 = Vector2.ZERO
 var altar_radius: float = 3.0
 
 
+const MAP_SANCTUARY := "sanctuary"
+const MAP_TUTORIAL := "tutorial"
+
+## Nom de la carte, transmis au client pour qu'il construise la même.
+var map_id: String = ""
+
+
 static func make_default() -> SimArena:
 	return make_sanctuary()
+
+
+static func make(id: String) -> SimArena:
+	return make_tutorial() if id == MAP_TUTORIAL else make_sanctuary()
+
+
+## Carte du tutoriel : un couloir tout droit, de la base de l'Aube (à gauche) au sanctuaire
+## du Crépuscule (à droite), avec un seul temple et l'autel de la relique sur le côté.
+static func make_tutorial() -> SimArena:
+	var a := SimArena.new()
+	a.map_id = MAP_TUTORIAL
+	a.half_size = Vector2(38.0, 14.0)
+	a.pillars = [Vector3(-11.0, -8.0, 1.4), Vector3(-11.0, 8.0, 1.4), Vector3(4.0, -9.0, 1.4)]
+	a.spawns = [[Vector2(-29.0, 0.0)], [Vector2(36.0, 10.0)]]
+	a.fountains = [Vector2(-29.0, 0.0), Vector2(36.0, 10.0)]
+	a.lanes = [[Vector2(-12.0, 0.0), Vector2(27.0, 0.0)]]
+	a.structures = [
+		{
+			"team": SimConst.TEAM_DAWN, "kind": SimStructure.KIND_CORE, "lane": -1, "tier": 2,
+			"pos": Vector2(-34.0, 0.0), "radius": 3.0, "max_hp": 8000.0,
+			"damage": 180.0, "range": 12.0, "cooldown": 1.0,
+		},
+		{
+			"team": SimConst.TEAM_DUSK, "kind": SimStructure.KIND_TEMPLE, "lane": 0, "tier": 1,
+			"pos": Vector2(20.0, 0.0), "radius": 2.0, "max_hp": 2600.0,
+			"damage": 80.0, "range": 11.0, "cooldown": 1.0,
+		},
+		{
+			"team": SimConst.TEAM_DUSK, "kind": SimStructure.KIND_CORE, "lane": -1, "tier": 2,
+			"pos": Vector2(32.0, 0.0), "radius": 3.0, "max_hp": 4200.0,
+			"damage": 70.0, "range": 10.0, "cooldown": 1.0,
+		},
+	]
+	a.has_altar = true
+	a.altar = Vector2(8.0, 9.0)
+	a.altar_radius = 3.0
+	var all_alive: Array[bool] = []
+	all_alive.resize(a.structures.size())
+	all_alive.fill(true)
+	a.set_structures_alive(all_alive)
+	return a
 
 
 ## Le sanctuaire : deux voies, deux temples par voie et par équipe, un sanctuaire
 ## final de chaque côté, l'autel de la relique au centre, un camp près de chaque voie.
 static func make_sanctuary() -> SimArena:
 	var a := SimArena.new()
+	a.map_id = MAP_SANCTUARY
 	a.half_size = Vector2(58.0, 32.0)
 	a.pillars = [
 		Vector3(-12.0, -10.0, 1.5), Vector3(12.0, -10.0, 1.5),

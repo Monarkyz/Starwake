@@ -4,9 +4,27 @@ Jeu d'arène en équipe, en ligne, pour PC et mobile. Des guerriers en armure, l
 
 Le jeu reprend les grands principes du genre « arène de bataille en ligne » centré sur le jeu d'équipe : expérience partagée par toute l'équipe, talents à choisir par paliers à la place d'une boutique, cartes à objectifs, camps de mercenaires, parties de 10 à 15 minutes. L'univers est original.
 
-![Partie d'entraînement](docs/jalon-5.png)
+![Le tutoriel : consigne à l'écran et repère autour du temple](docs/jalon-6.png)
 
-## État : jalon 5, douze héros
+## État : jalon 6, le tutoriel
+
+Les six jalons du prototype sont faits : le jeu se joue en ligne à 3 contre 3 sur PC et sur mobile, avec douze héros, des bots et un tutoriel.
+
+### Tutoriel
+
+Le bouton **Tutoriel** du menu lance une séquence solo de quelques minutes, sur une petite carte dédiée. Le joueur y incarne Théron de la Flèche et apprend en neuf étapes :
+
+1. se déplacer ;
+2. viser et attaquer ;
+3. le tir perforant ;
+4. la ruée ;
+5. la jauge d'éther et l'éveil ;
+6. l'expérience d'équipe et les talents ;
+7. les sbires et les temples ;
+8. la relique ;
+9. le sanctuaire adverse, dont la chute donne la victoire.
+
+Chaque étape affiche sa consigne à l'écran, en français ou en anglais, avec une version pour le clavier et la souris et une version pour le tactile. Un cercle lumineux montre où aller. Le scénario attend le joueur : rien n'avance tant que l'objectif de l'étape n'est pas atteint.
 
 ### Commandes tactiles
 
@@ -94,7 +112,7 @@ Les bots jouent les trois héros et choisissent leurs talents. En entraînement 
 - **La carte du sanctuaire** (jalon 2) : deux voies de sbires, des temples à détruire dans l'ordre, le sanctuaire final dont la chute donne la victoire, la relique à canaliser au centre, deux camps de mercenaires, l'expérience d'équipe, les fontaines de soin.
 - **Le socle en ligne** (jalon 1) : serveur dédié qui fait autorité, jusqu'à 6 joueurs (3 contre 3), client qui prédit le déplacement de son héros, interface en français et en anglais.
 
-Ce qui n'existe pas encore : le tutoriel, le matchmaking, la version iOS. Les modèles sont des formes simples en attendant les packs d'assets, et l'équilibrage n'a été réglé que sur des parties entre bots.
+Ce qui n'existe pas encore : le matchmaking (les joueurs saisissent l'adresse d'un serveur), la version iOS, les vrais modèles et sons. Les modèles sont des formes simples en attendant les packs d'assets, et l'équilibrage n'a été réglé que sur des parties entre bots.
 
 ## Lancer le jeu
 
@@ -142,13 +160,14 @@ Options du serveur, à placer après `--` :
 tests/run_all.sh
 ```
 
-Le script lance cinq séries de tests :
+Le script lance six séries de tests :
 
-1. les règles du jeu, une par une (déplacements, capacités des trois héros, talents, éther et éveil, rangs d'armures, sbires, temples, relique, camps, expérience, format réseau) ;
+1. les règles du jeu, une par une (déplacements, capacités des douze héros, talents, éther et éveil, rangs d'armures, sbires, temples, relique, camps, expérience, format réseau) ;
 2. les commandes tactiles : des doigts virtuels sur le joystick et les boutons, visée automatique et manuelle ;
 3. une session locale : jouer, quitter, relancer une partie dans le même processus ;
-4. deux parties complètes entre six bots, simulées en accéléré, qui doivent se terminer par la chute d'un sanctuaire en 5 à 25 minutes de jeu ;
-5. une vraie partie en réseau à 3 contre 3 : un serveur complété par des bots, un client aux commandes directes et un client aux commandes tactiles, qui doivent remplacer chacun un bot avec le héros choisi, voir les sbires, agir et provoquer un premier événement de jeu.
+4. le tutoriel, déroulé en entier par un pilote automatique, dans la simulation puis dans le vrai client ;
+5. deux parties complètes entre six bots, simulées en accéléré, qui doivent se terminer par la chute d'un sanctuaire en 5 à 25 minutes de jeu ;
+6. une vraie partie en réseau à 3 contre 3 : un serveur complété par des bots, un client aux commandes directes et un client aux commandes tactiles, qui doivent remplacer chacun un bot avec le héros choisi, voir les sbires, agir et provoquer un premier événement de jeu.
 
 Si Godot n'est pas dans le `PATH`, indiquer son chemin : `GODOT=/chemin/vers/godot tests/run_all.sh`.
 
@@ -193,6 +212,6 @@ Trois règles tiennent l'ensemble :
 3. **Trois premiers héros** (fait) : tank, assassin et soutien, avec talents, jauge d'éther, éveil et rangs d'armures ; bots pour compléter les parties.
 4. **Mobile** (fait, à valider sur un vrai téléphone) : commandes tactiles, jeu croisé avec le PC, versions Windows, Linux et Android fabriquées automatiquement.
 5. **Héros 4 à 12** (fait) : neuf héros ajoutés, soit trois tanks, trois assassins et trois soutiens.
-6. **Tutoriel scénarisé**.
+6. **Tutoriel scénarisé** (fait) : neuf étapes en solo, au clavier comme en tactile.
 
 Décisions prises pour le prototype : univers original, Godot 4, 3 contre 3, déplacement direct sur toutes les plateformes, 3D stylisée low-poly, jeu gratuit avec cosmétiques sans avantage en jeu, français et anglais.

@@ -4,6 +4,7 @@ extends Control
 
 signal join_requested(address: String, player_name: String, hero: String)
 signal training_requested(player_name: String, hero: String)
+signal tutorial_requested(player_name: String)
 
 var _name_edit: LineEdit
 var _address_edit: LineEdit
@@ -61,7 +62,13 @@ func _ready() -> void:
 	_hero_detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(_hero_detail)
 	_select_hero(Settings.hero)
-	box.add_child(_button("MENU_TRAINING", _on_training))
+	var solo := HBoxContainer.new()
+	solo.add_theme_constant_override("separation", 8)
+	for entry: Array in [["MENU_TUTORIAL", func() -> void: tutorial_requested.emit(_player_name())], ["MENU_TRAINING", _on_training]]:
+		var solo_button := _button(entry[0], entry[1])
+		solo_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		solo.add_child(solo_button)
+	box.add_child(solo)
 
 	_address_edit = _line_edit("MENU_ADDRESS_PLACEHOLDER", Settings.address)
 	_address_edit.text_submitted.connect(func(_text: String) -> void: _on_join())

@@ -28,6 +28,7 @@ var _focus: Vector3 = Vector3.ZERO
 var _focus_ready: bool = false
 var _time: float = 0.0
 var _aim_line: MeshInstance3D
+var _tutorial_marker: MeshInstance3D
 
 var _projectile_meshes: Array[SphereMesh] = []
 var _projectile_materials: Array[StandardMaterial3D] = []
@@ -95,6 +96,7 @@ func _process(delta: float) -> void:
 	hud.heroes = heroes
 	hud.units = units
 	_update_aim_line()
+	_update_tutorial_marker()
 
 	if snap != null:
 		for i in mini(snap.structures.size(), _structure_views.size()):
@@ -208,6 +210,30 @@ func _sync_beams(delta: float) -> void:
 		else:
 			entry["node"].queue_free()
 	_beams = kept
+
+
+## Tutoriel : un cercle lumineux montre où aller pour l'étape en cours.
+func _update_tutorial_marker() -> void:
+	var at := TutorialDirector.marker(client.tutorial_step)
+	if at == Vector2.INF:
+		if _tutorial_marker != null:
+			_tutorial_marker.visible = false
+		return
+	if _tutorial_marker == null:
+		var glow := StandardMaterial3D.new()
+		glow.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		glow.albedo_color = Color("fff4d6")
+		var ring := TorusMesh.new()
+		ring.inner_radius = 2.2
+		ring.outer_radius = 2.5
+		ring.rings = 40
+		ring.ring_segments = 4
+		_tutorial_marker = _add_static(ring, glow, Vector3.ZERO)
+		_tutorial_marker.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var pulse := 1.0 + 0.12 * sin(_time * 4.0)
+	_tutorial_marker.visible = true
+	_tutorial_marker.position = Vector3(at.x, 0.12, at.y)
+	_tutorial_marker.scale = Vector3(pulse, 0.12, pulse)
 
 
 ## Pendant une visée au doigt, montre sur le terrain où partira la capacité.
@@ -406,8 +432,14 @@ func _build_shared_resources() -> void:
 	archer.radial_segments = 6
 	var guardian := BoxMesh.new()
 	guardian.size = Vector3(1.25, 1.6, 1.25)
-	_unit_meshes = [footman, archer, guardian]
-	_unit_heights = [0.85, 1.05, 1.6]
+	# Mannequin du tutoriel : un poteau trapu.
+	var dummy := CylinderMesh.new()
+	dummy.top_radius = 0.45
+	dummy.bottom_radius = 0.3
+	dummy.height = 1.3
+	dummy.radial_segments = 8
+	_unit_meshes = [footman, archer, guardian, dummy]
+	_unit_heights = [0.85, 1.05, 1.6, 1.3]
 	for color: Color in [Palette.TEAM_COLORS[0], Palette.TEAM_COLORS[1], NEUTRAL_COLOR]:
 		_unit_materials.append(_flat(color.darkened(0.15)))
 

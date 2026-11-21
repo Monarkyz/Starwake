@@ -79,6 +79,9 @@ func _draw() -> void:
 	_draw_top_bar(snap)
 	_draw_feed()
 	_draw_minimap(snap)
+	if snap.match_over and client.tutorial_step >= 0:
+		# Fin du tutoriel : le panneau de conclusion reste affiché sous le résultat.
+		_draw_tutorial()
 	if touch:
 		_leave_rect = Rect2(_margins.x + 16.0, _margins.y + 16.0, 96.0, 46.0)
 		draw_rect(_leave_rect, Palette.PANEL)
@@ -93,6 +96,7 @@ func _draw() -> void:
 		_draw_match_end(snap, me)
 		return
 	_draw_talent_choice(me)
+	_draw_tutorial()
 	if not me.alive:
 		_text_centered(size.y * 0.4, tr("HUD_RESPAWN_IN") % ceili(me.respawn_left), 28, Palette.TEXT)
 	elif me.stun_ticks > 0:
@@ -174,6 +178,9 @@ func _draw_top_bar(snap: SimSnapshot) -> void:
 
 	if not client.arena.has_altar:
 		return
+	if client.tutorial_step >= 0 and not snap.relic_active:
+		# Dans le tutoriel, la relique n'apparaît que quand le scénario l'appelle.
+		return
 	if snap.relic_active:
 		draw_string(_font, Vector2(mid - 258.0, 62.0), tr("HUD_RELIC_ACTIVE"), HORIZONTAL_ALIGNMENT_CENTER, 516.0, 14, Palette.GOLD)
 		_bar(Rect2(mid - 258.0, 69.0, 250.0, 6.0), snap.relic_progress[0], Palette.TEAM_COLORS[0])
@@ -247,6 +254,29 @@ func _draw_ability_bar(me: SimHero) -> void:
 			draw_rect(Rect2(rect.position.x, rect.end.y - covered, rect.size.x, covered), Color(0.0, 0.0, 0.0, 0.6))
 			draw_string(_font, Vector2(rect.position.x, rect.position.y + 50.0), "%.1f" % left_time,
 					HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, 22, Palette.TEXT)
+
+
+## Tutoriel : l'étape en cours et sa consigne, sous le bandeau du haut.
+func _draw_tutorial() -> void:
+	var step := client.tutorial_step
+	if step < 0:
+		return
+	var key := "TUTORIAL_%d" % step
+	# Certaines consignes ont une version tactile.
+	if touch and tr(key + "_TOUCH") != key + "_TOUCH":
+		key += "_TOUCH"
+	var width := minf(700.0, size.x - 40.0)
+	var left := (size.x - width) * 0.5
+	var top := 92.0
+	var text := tr(key)
+	var lines := _font.get_multiline_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, width - 28.0, 15).y
+	draw_rect(Rect2(left, top, width, lines + 44.0), Palette.PANEL)
+	draw_rect(Rect2(left, top, width, lines + 44.0), Palette.GOLD, false, 1.5)
+	var title := tr("HUD_TUTORIAL_DONE")
+	if step < TutorialDirector.STEP_DONE:
+		title = tr("HUD_TUTORIAL_STEP") % [step + 1, TutorialDirector.STEP_DONE]
+	draw_string(_font, Vector2(left + 14.0, top + 22.0), title, HORIZONTAL_ALIGNMENT_LEFT, width - 28.0, 14, Palette.GOLD)
+	draw_multiline_string(_font, Vector2(left + 14.0, top + 44.0), text, HORIZONTAL_ALIGNMENT_LEFT, width - 28.0, 15, -1, Palette.TEXT)
 
 
 ## Créneau de l'éveil : il se remplit avec l'éther, puis affiche le temps d'éveil restant.
@@ -332,6 +362,9 @@ func _draw_minimap(snap: SimSnapshot) -> void:
 			draw_rect(rect, Palette.TEAM_COLORS[s.team])
 		else:
 			draw_rect(rect, Color(Palette.TEAM_COLORS[s.team], 0.35), false, 1.0)
+	var goal := TutorialDirector.marker(client.tutorial_step)
+	if goal != Vector2.INF:
+		draw_arc(to_map.call(goal), 7.0, 0.0, TAU, 20, Color("fff4d6"), 2.0)
 	for h in heroes:
 		if not h.alive:
 			continue
@@ -346,7 +379,8 @@ func _draw_match_end(snap: SimSnapshot, me: SimHero) -> void:
 	var won := snap.winner == me.team
 	_text_centered(size.y * 0.3 + 70.0, tr("HUD_VICTORY") if won else tr("HUD_DEFEAT"), 56,
 			Palette.GOLD if won else Palette.TEXT_DIM)
-	_text_centered(size.y * 0.3 + 108.0, tr("HUD_NEXT_MATCH"), 16, Palette.TEXT)
+	if client.tutorial_step < 0:
+		_text_centered(size.y * 0.3 + 108.0, tr("HUD_NEXT_MATCH"), 16, Palette.TEXT)
 
 
 # ---------------------------------------------------------------------------

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Lance tous les tests : règles du jeu, commandes tactiles, session locale, partie complète
-# entre bots en accéléré, puis partie réelle en réseau à 3 contre 3 entre un serveur, ses
+# Lance tous les tests : règles du jeu, commandes tactiles, session locale, tutoriel, partie
+# complète entre bots en accéléré, puis partie réelle en réseau à 3 contre 3 entre un serveur, ses
 # bots et deux clients (l'un aux commandes directes, l'autre aux commandes tactiles).
 # Usage : tests/run_all.sh        (variable GODOT pour choisir l'exécutable, "godot" par défaut)
 set -u
@@ -36,6 +36,22 @@ if ! "$GODOT" --headless --path . -s tests/test_session.gd 2>&1 | tee "$LOGS/ses
 fi
 if grep -Eq "SCRIPT ERROR|Parse Error|FAIL:" "$LOGS/session.log" || ! grep -q "2 rounds, 0 failures" "$LOGS/session.log"; then
 	echo "ÉCHEC : la session locale ne se relance pas correctement"
+	status=1
+fi
+
+echo "== Tutoriel : scénario complet dans la simulation =="
+if ! "$GODOT" --headless --path . -s tests/test_tutorial.gd 2>&1 | tee "$LOGS/tutorial.log"; then
+	status=1
+fi
+if grep -Eq "SCRIPT ERROR|Parse Error|FAIL:" "$LOGS/tutorial.log"; then
+	status=1
+fi
+
+echo "== Tutoriel : joué de bout en bout par le vrai client =="
+"$GODOT" --headless --path . -- --tutorial --autopilot --quit-on-match-end --quit-after=150 2>&1 | tee "$LOGS/tutorial_client.log"
+grep -q "tutorial step=9" "$LOGS/tutorial_client.log" || { echo "ÉCHEC : le tutoriel n'est pas allé jusqu'à sa dernière étape"; status=1; }
+grep -q "match over winner=0" "$LOGS/tutorial_client.log" || { echo "ÉCHEC : le tutoriel ne s'est pas terminé par une victoire"; status=1; }
+if grep -Eq "SCRIPT ERROR|Parse Error" "$LOGS/tutorial_client.log"; then
 	status=1
 fi
 

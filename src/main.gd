@@ -9,6 +9,7 @@ extends Node
 ##   --hero=sagitta           héros du joueur (sagitta, scutum ou columba)
 ##   --connect=hôte[:port]    rejoindre ce serveur sans passer par le menu
 ##   --training               lancer l'entraînement local sans passer par le menu
+##   --tutorial               lancer le tutoriel sans passer par le menu
 ##   --name=Nom               nom du joueur
 ##   --lang=fr                langue de l'interface pour ce lancement (fr ou en)
 ##   --touch                  commandes tactiles (à la souris sur ordinateur)
@@ -58,6 +59,8 @@ func _ready() -> void:
 		_join(str(_opts["connect"]), str(_opts.get("name", "Player")), str(_opts.get("hero", HeroDefs.DEFAULT_HERO)))
 	elif _opts.has("training"):
 		_start_training(str(_opts.get("name", "Player")), str(_opts.get("hero", HeroDefs.DEFAULT_HERO)))
+	elif _opts.has("tutorial"):
+		_start_tutorial(str(_opts.get("name", "Player")))
 	else:
 		_show_menu()
 
@@ -104,14 +107,24 @@ func _show_menu() -> void:
 	add_child(_menu)
 	_menu.join_requested.connect(_join)
 	_menu.training_requested.connect(_start_training)
+	_menu.tutorial_requested.connect(_start_tutorial)
+
+
+## Tutoriel : un serveur local en mode tutoriel, pour un seul joueur.
+func _start_tutorial(player_name: String) -> void:
+	_start_local(player_name, TutorialDirector.HERO, true)
 
 
 ## Entraînement local : un serveur dans ce même processus, rempli de bots.
 func _start_training(player_name: String, hero: String) -> void:
+	_start_local(player_name, hero, false)
+
+
+func _start_local(player_name: String, hero: String, tutorial: bool) -> void:
 	_server = _make_server()
 	var port := 0
 	for candidate in range(DEFAULT_PORT + 1, DEFAULT_PORT + 11):
-		if _server.start(candidate, 0, true) == OK:
+		if _server.start(candidate, 0, not tutorial, tutorial) == OK:
 			port = candidate
 			break
 	if port == 0:

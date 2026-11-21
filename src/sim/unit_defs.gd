@@ -10,6 +10,8 @@ class_name UnitDefs
 const FOOTMAN := 0
 const ARCHER := 1
 const GUARDIAN := 2
+## Mannequin du tutoriel : immobile et inoffensif.
+const DUMMY := 3
 
 const DEFS: Array[Dictionary] = [
 	{
@@ -26,6 +28,11 @@ const DEFS: Array[Dictionary] = [
 		"id": "guardian", "max_hp": 1300.0, "speed": 3.8, "radius": 0.8,
 		"damage": 65.0, "cooldown": 1.1, "range": 1.2, "aggro": 6.0,
 		"xp": 90.0, "structure_mult": 1.5, "ranged": false,
+	},
+	{
+		"id": "dummy", "max_hp": 250.0, "speed": 0.0, "radius": 0.5,
+		"damage": 0.0, "cooldown": 1.0, "range": 0.0, "aggro": 0.0,
+		"xp": 0.0, "structure_mult": 0.0, "ranged": false,
 	},
 ]
 

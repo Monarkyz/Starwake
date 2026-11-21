@@ -31,6 +31,8 @@ var _bots: Array = []  # [{hero_id, brain}]
 var _roster: Dictionary = {}  # hero_id -> [nom, équipe, est_un_bot]
 var _mp_path: NodePath
 var _restart_left: float = 0.0
+## Scénario du tutoriel quand le serveur tourne dans ce mode, sinon null.
+var _tutorial: TutorialDirector
 
 
 func _enter_tree() -> void:
@@ -57,8 +59,11 @@ func _ready() -> void:
 	net.talent_requested.connect(_on_talent_requested)
 
 
-func start(port: int, bot_count: int = 0, fill: bool = false) -> Error:
-	world = SimWorld.new()
+## Lance le serveur. En mode tutoriel, il accueille un seul joueur sur la carte du
+## tutoriel et déroule le scénario à la place d'une partie normale.
+func start(port: int, bot_count: int = 0, fill: bool = false, tutorial: bool = false) -> Error:
+	world = TutorialDirector.make_world() if tutorial else SimWorld.new()
+	_tutorial = TutorialDirector.new() if tutorial else null
 	_peer = ENetMultiplayerPeer.new()
 	# Deux connexions de plus que de places, pour pouvoir répondre "complet".
 	var err := _peer.create_server(port, SimConst.MAX_PLAYERS + 2)
@@ -69,8 +74,10 @@ func start(port: int, bot_count: int = 0, fill: bool = false) -> Error:
 	multiplayer.multiplayer_peer = _peer
 	multiplayer.peer_connected.connect(_on_peer_connected)
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
-	fill_bots = fill
+	fill_bots = fill and not tutorial
 	var wanted := SimConst.MAX_PLAYERS if fill else mini(bot_count, SimConst.MAX_PLAYERS - 1)
+	if tutorial:
+		wanted = 0
 	for i in wanted:
 		_add_bot(_smaller_team())
 	return OK
@@ -95,6 +102,11 @@ func _physics_process(_delta: float) -> void:
 	world.step(inputs)
 	if world.tick % SimConst.TICK_RATE == 0:
 		_pick_bot_talents()
+	if _tutorial != null and not _players.is_empty():
+		var pupil: SimHero = world.heroes.get(_players.values()[0]["hero_id"])
+		if _tutorial.update(world, pupil):
+			print("[server] tutorial step=%d time=%ds" % [_tutorial.step, int(world.tick * SimConst.DT)])
+			world.events.append(["tutorial", _tutorial.step, 0])
 
 	var peers := _connected_peers()
 	var snapshot := world.to_snapshot()
@@ -112,7 +124,7 @@ func _physics_process(_delta: float) -> void:
 			get_tree().quit(0)
 
 	# Partie terminée : laisser le temps de lire le résultat, puis en relancer une.
-	if world.match_over:
+	if world.match_over and _tutorial == null:
 		_restart_left -= SimConst.DT
 		if _restart_left <= 0.0:
 			print("[server] new match")
@@ -264,6 +276,13 @@ func _on_join_requested(peer_id: int, player_name: String, version: int, hero_de
 		return
 	var def_id := hero_def if HeroDefs.has_hero(hero_def) else HeroDefs.DEFAULT_HERO
 	var team := _smaller_team()
+	if _tutorial != null:
+		# Le tutoriel se joue seul, avec le héros dont il explique les capacités.
+		if not _players.is_empty():
+			_reject(peer_id, "REJECT_FULL")
+			return
+		def_id = TutorialDirector.HERO
+		team = SimConst.TEAM_DAWN
 	if world.heroes.size() >= SimConst.MAX_PLAYERS:
 		# Partie pleine : un joueur ne peut entrer qu'à la place d'un bot.
 		var bot := _bot_to_replace(def_id)
@@ -277,7 +296,7 @@ func _on_join_requested(peer_id: int, player_name: String, version: int, hero_de
 	_players[peer_id] = {"hero_id": hero.id, "queue": [], "last": SimInput.new(), "last_seq": 0}
 	_roster[hero.id] = [_clean_name(player_name), team, false]
 	print("[server] join name=%s team=%d hero=%s heroes=%d" % [_hero_name(hero.id), team, def_id, world.heroes.size()])
-	net.s2c_welcome.rpc_id(peer_id, {"hero_id": hero.id, "tick": world.tick})
+	net.s2c_welcome.rpc_id(peer_id, {"hero_id": hero.id, "tick": world.tick, "map": world.arena.map_id})
 	_broadcast_roster()
 
 
