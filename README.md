@@ -57,6 +57,8 @@ Les joueurs sur PC et sur mobile se connectent au même serveur et jouent dans l
 
 Il n'y a pas de version iOS : la fabriquer demande un Mac et un compte développeur Apple.
 
+**Installer l'APK** : télécharger `starwake-android` depuis GitHub (il faut être connecté à son compte), extraire `starwake.apk` de l'archive, l'ouvrir sur le téléphone et autoriser l'installation d'applications inconnues. Tous les APK sont signés avec la même clé de test (`ci/starwake-test.keystore`) : une version plus récente s'installe par-dessus l'ancienne, sans désinstaller. Cette clé est publique et ne sert qu'aux essais ; la version du Play Store aura sa propre clé, gardée secrète.
+
 ### Douze héros
 
 Quatre héros par rôle, chacun lié à une constellation. Le héros se choisit dans le menu, avant de lancer une partie.

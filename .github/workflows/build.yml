@@ -13,6 +13,9 @@ permissions:
 
 env:
   GODOT_VERSION: 4.7.1
+  # Empreinte de ci/starwake-test.keystore : si la clé change, les mises à jour de l'APK
+  # ne s'installent plus par-dessus l'ancienne version, donc la fabrication échoue.
+  TEST_KEY_SHA256: 4febc97fc175c3f1d13214ab3c907a86299d08ee656f869216e1b76793a5c568
 
 jobs:
   desktop:
@@ -98,10 +101,11 @@ jobs:
 
       - name: Préparer la signature de test et les réglages de l'éditeur
         run: |
-          # Clé de test générée à chaque exécution : elle ne sert qu'à installer l'APK à la main.
-          keytool -genkeypair -keyalg RSA -keysize 2048 -validity 9999 \
-            -alias androiddebugkey -keypass android -storepass android \
-            -keystore "$RUNNER_TEMP/debug.keystore" -dname "CN=Android Debug,O=Android,C=US"
+          # Clé de test fixe, rangée dans le dépôt : deux APK successifs portent la même
+          # signature, donc le second s'installe par-dessus le premier. Elle est publique
+          # et ne sert qu'aux APK de test ; la version du Play Store aura sa propre clé.
+          keystore="$GITHUB_WORKSPACE/ci/starwake-test.keystore"
+          test -s "$keystore"
           sdk="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
           ls "$sdk" "$sdk/build-tools" | head -40
           mkdir -p "$HOME/.config/godot"
@@ -111,7 +115,7 @@ jobs:
           [resource]
           export/android/android_sdk_path = "$sdk"
           export/android/java_sdk_path = "$JAVA_HOME"
-          export/android/debug_keystore = "$RUNNER_TEMP/debug.keystore"
+          export/android/debug_keystore = "$keystore"
           export/android/debug_keystore_user = "androiddebugkey"
           export/android/debug_keystore_pass = "android"
           SETTINGS
@@ -125,6 +129,13 @@ jobs:
           godot --headless --path . --export-debug "Android" build/android/starwake.apk
           ls -la build/android/
           test -s build/android/starwake.apk
+
+      - name: Vérifier que l'APK porte la signature fixe
+        run: |
+          sdk="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          apksigner="$(ls -d "$sdk"/build-tools/*/ | sort -V | tail -1)apksigner"
+          "$apksigner" verify --print-certs build/android/starwake.apk | tee signature.log
+          grep -q "certificate SHA-256 digest: ${TEST_KEY_SHA256}$" signature.log
 
       - uses: actions/upload-artifact@v4
         with:
