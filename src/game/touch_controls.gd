@@ -29,6 +29,9 @@ const BUTTONS: Array = [
 ]
 
 var client: GameClient
+## Dit si un point est sur un élément touchable de l'interface (talent, bouton Menu) : un
+## doigt posé là n'est pas pour les commandes. Fourni par l'interface de jeu.
+var reserved: Callable = Callable()
 ## Marges de la zone sûre de l'écran (encoche, bords arrondis) : gauche, haut, droite, bas.
 var margins: Vector4 = Vector4.ZERO
 
@@ -74,6 +77,8 @@ func _input(event: InputEvent) -> void:
 func handle_touch(index: int, pos: Vector2, pressed: bool) -> bool:
 	if not pressed:
 		return _release(index)
+	if reserved.is_valid() and reserved.call(pos):
+		return false
 	for slot in BUTTONS.size():
 		var radius: float = BUTTONS[slot][1]
 		if _fingers[slot] == -1 and pos.distance_to(button_center(slot)) <= radius + TOUCH_SLACK:
@@ -131,6 +136,22 @@ func reset() -> void:
 # ---------------------------------------------------------------------------
 # Lecture par TouchInput
 # ---------------------------------------------------------------------------
+
+## Largeur occupée par les boutons depuis le bord droit de l'écran, tolérance comprise.
+static func reach() -> float:
+	var widest := 0.0
+	for button: Array in BUTTONS:
+		widest = maxf(widest, -(button[0] as Vector2).x + (button[1] as float))
+	return widest + TOUCH_SLACK
+
+
+## Hauteur occupée par les boutons depuis le bas de l'écran, tolérance comprise.
+static func top_reach() -> float:
+	var highest := 0.0
+	for button: Array in BUTTONS:
+		highest = maxf(highest, -(button[0] as Vector2).y + (button[1] as float))
+	return highest + TOUCH_SLACK
+
 
 func button_center(slot: int) -> Vector2:
 	var offset: Vector2 = BUTTONS[slot][0]
@@ -195,15 +216,27 @@ func _draw() -> void:
 	var me: SimHero = client.local if client != null else null
 	var base := _stick_origin if _stick_finger != -1 else stick_home()
 	var alpha := 0.38 if _stick_finger != -1 else 0.16
-	draw_circle(base, STICK_RADIUS, Color(1.0, 1.0, 1.0, alpha * 0.45))
-	draw_arc(base, STICK_RADIUS, 0.0, TAU, 48, Color(1.0, 1.0, 1.0, alpha), 2.0)
-	draw_circle(base + _stick_vector * STICK_RADIUS, 34.0, Color(1.0, 1.0, 1.0, alpha + 0.2))
+	# Au repos, le joystick s'efface si un élément de l'interface occupe sa place.
+	if _stick_finger != -1 or not _home_is_covered():
+		draw_circle(base, STICK_RADIUS, Color(1.0, 1.0, 1.0, alpha * 0.45))
+		draw_arc(base, STICK_RADIUS, 0.0, TAU, 48, Color(1.0, 1.0, 1.0, alpha), 2.0)
+		draw_circle(base + _stick_vector * STICK_RADIUS, 34.0, Color(1.0, 1.0, 1.0, alpha + 0.2))
 
 	if me == null:
 		return
 	var abilities: Array = HeroDefs.get_def(me.def_id)["abilities"]
 	for slot in mini(BUTTONS.size(), abilities.size()):
 		_draw_button(slot, abilities[slot], me)
+
+
+func _home_is_covered() -> bool:
+	if not reserved.is_valid():
+		return false
+	var home := stick_home()
+	for offset: Vector2 in [Vector2.ZERO, Vector2.LEFT, Vector2.RIGHT, Vector2.UP, Vector2.DOWN]:
+		if reserved.call(home + offset * STICK_RADIUS):
+			return true
+	return false
 
 
 func _draw_button(slot: int, ability: Dictionary, me: SimHero) -> void:

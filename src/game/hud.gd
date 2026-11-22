@@ -10,6 +10,12 @@ const RANK_KEYS: Array[String] = ["RANK_BRONZE", "RANK_SILVER", "RANK_GOLD"]
 const ETHER_COLOR := Color("7fe3ff")
 const FEED_DURATION := 7.0
 const MINIMAP_WIDTH := 250.0
+const MINIMAP_WIDTH_TOUCH := 200.0
+const TOP_BAR_SIZE := Vector2(660.0, 74.0)
+## Bouton Menu de la mise en page tactile.
+const LEAVE_SIZE := Vector2(110.0, 56.0)
+const TALENT_BOX := Vector2(330.0, 92.0)
+const TALENT_GAP := 14.0
 const NEUTRAL := Color("8fd6cb")
 
 ## Le joueur demande à quitter la partie (bouton tactile).
@@ -30,6 +36,9 @@ var _font: Font
 var _talent_rects: Array[Rect2] = []
 var _leave_rect: Rect2 = Rect2()
 var _margins: Vector4 = Vector4.ZERO
+## Bas du bandeau du haut et du panneau du tutoriel, pour empiler ce qui vient dessous.
+var _top_bottom: float = 82.0
+var _tutorial_bottom: float = 0.0
 
 
 func _ready() -> void:
@@ -45,7 +54,8 @@ func _input(event: InputEvent) -> void:
 	var pos := Vector2.INF
 	if event is InputEventScreenTouch and (event as InputEventScreenTouch).pressed:
 		pos = (event as InputEventScreenTouch).position
-	elif event is InputEventMouseButton:
+	elif event is InputEventMouseButton and not touch:
+		# En tactile, chaque doigt arrive aussi sous la forme d'un clic : ne compter que le doigt.
 		var click := event as InputEventMouseButton
 		if click.pressed and click.button_index == MOUSE_BUTTON_LEFT:
 			pos = click.position
@@ -59,6 +69,60 @@ func _input(event: InputEvent) -> void:
 	if touch and _leave_rect.has_point(pos):
 		get_viewport().set_input_as_handled()
 		leave_requested.emit()
+
+
+## Vrai si ce point est sur un élément touchable de l'interface (talent, bouton Menu) : les
+## commandes tactiles le laissent alors passer au lieu d'y poser le joystick.
+func is_interactive_at(pos: Vector2) -> bool:
+	if touch and _leave_rect.has_point(pos):
+		return true
+	for rect in _talent_rects:
+		if rect.has_point(pos):
+			return true
+	return false
+
+
+# ---------------------------------------------------------------------------
+# Mise en page
+# ---------------------------------------------------------------------------
+
+## Bande libre en haut de l'écran, [gauche, droite]. En tactile, elle va du bouton Menu à la
+## minicarte ; sur ordinateur, la minicarte est en bas et toute la largeur est libre.
+static func top_span(screen: Vector2, margins: Vector4, touch_layout: bool) -> Vector2:
+	if not touch_layout:
+		return Vector2(20.0, screen.x - 20.0)
+	return Vector2(
+		margins.x + 16.0 + LEAVE_SIZE.x + 12.0,
+		screen.x - margins.z - 16.0 - MINIMAP_WIDTH_TOUCH - 3.0 - 12.0)
+
+
+## Place un bloc de cette largeur dans une bande : au milieu de l'écran s'il y tient, sinon
+## décalé, et rétréci s'il est plus large que la bande. Renvoie (bord gauche, échelle).
+static func fit_in_span(span: Vector2, screen_width: float, width: float) -> Vector2:
+	var room := maxf(span.y - span.x, 1.0)
+	var scale := minf(1.0, room / width)
+	var fitted := width * scale
+	return Vector2(clampf((screen_width - fitted) * 0.5, span.x, span.y - fitted), scale)
+
+
+## Cases des deux talents proposés. Sur ordinateur, elles sont au-dessus de la barre de
+## capacités. En tactile, elles sont en haut de l'écran (à partir de top) et s'arrêtent avant
+## les boutons de capacités, quitte à être plus étroites et plus hautes.
+static func talent_layout(screen: Vector2, margins: Vector4, touch_layout: bool, top: float) -> Array[Rect2]:
+	var box := TALENT_BOX
+	var left := (screen.x - box.x * 2.0 - TALENT_GAP) * 0.5
+	if touch_layout:
+		var span := Vector2(margins.x + 16.0, screen.x - margins.z - TouchControls.reach())
+		box.x = clampf((span.y - span.x - TALENT_GAP) * 0.5, 160.0, TALENT_BOX.x)
+		if box.x < 260.0:
+			box.y = 112.0
+		left = fit_in_span(span, screen.x, box.x * 2.0 + TALENT_GAP).x
+	else:
+		top = screen.y - SLOT_SIZE.y - 22.0 - 44.0 - box.y - 26.0
+	var rects: Array[Rect2] = []
+	for i in 2:
+		rects.append(Rect2(Vector2(left + i * (box.x + TALENT_GAP), top), box))
+	return rects
 
 
 func _process(delta: float) -> void:
@@ -79,15 +143,16 @@ func _draw() -> void:
 	_draw_top_bar(snap)
 	_draw_feed()
 	_draw_minimap(snap)
+	_tutorial_bottom = 0.0
 	if snap.match_over and client.tutorial_step >= 0:
 		# Fin du tutoriel : le panneau de conclusion reste affiché sous le résultat.
 		_draw_tutorial()
 	if touch:
-		_leave_rect = Rect2(_margins.x + 16.0, _margins.y + 16.0, 96.0, 46.0)
+		_leave_rect = Rect2(Vector2(_margins.x + 16.0, _margins.y + 16.0), LEAVE_SIZE)
 		draw_rect(_leave_rect, Palette.PANEL)
 		draw_rect(_leave_rect, Palette.GROUND_LINE, false, 1.5)
-		draw_string(_font, _leave_rect.position + Vector2(0.0, 29.0), tr("HUD_MENU"),
-				HORIZONTAL_ALIGNMENT_CENTER, _leave_rect.size.x, 15, Palette.TEXT)
+		draw_string(_font, _leave_rect.position + Vector2(0.0, 35.0), tr("HUD_MENU"),
+				HORIZONTAL_ALIGNMENT_CENTER, _leave_rect.size.x, 17, Palette.TEXT)
 	else:
 		_text(Vector2(16.0, size.y - 16.0), tr("HUD_LEAVE_HINT"), 13, Palette.TEXT_DIM)
 	_draw_ability_bar(me)
@@ -95,8 +160,8 @@ func _draw() -> void:
 	if snap.match_over:
 		_draw_match_end(snap, me)
 		return
-	_draw_talent_choice(me)
 	_draw_tutorial()
+	_draw_talent_choice(me)
 	if not me.alive:
 		_text_centered(size.y * 0.4, tr("HUD_RESPAWN_IN") % ceili(me.respawn_left), 28, Palette.TEXT)
 	elif me.stun_ticks > 0:
@@ -159,8 +224,18 @@ func _on_screen(world_pos: Vector3) -> Vector2:
 # ---------------------------------------------------------------------------
 
 func _draw_top_bar(snap: SimSnapshot) -> void:
-	var mid := size.x * 0.5
-	draw_rect(Rect2(mid - 330.0, 8.0, 660.0, 74.0), Palette.PANEL)
+	# Le bandeau se dessine dans son propre repère : sur un écran étroit, il est décalé ou
+	# rétréci pour tenir entre le bouton Menu et la minicarte.
+	var fit := fit_in_span(top_span(size, _margins, touch), size.x, TOP_BAR_SIZE.x)
+	_top_bottom = _margins.y + (8.0 + TOP_BAR_SIZE.y) * fit.y
+	draw_set_transform(Vector2(fit.x, _margins.y), 0.0, Vector2(fit.y, fit.y))
+	_draw_top_bar_content(snap)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+func _draw_top_bar_content(snap: SimSnapshot) -> void:
+	var mid := TOP_BAR_SIZE.x * 0.5
+	draw_rect(Rect2(Vector2(0.0, 8.0), TOP_BAR_SIZE), Palette.PANEL)
 	for team in 2:
 		var color: Color = Palette.TEAM_COLORS[team]
 		var left := mid - 318.0 if team == 0 else mid + 68.0
@@ -192,10 +267,10 @@ func _draw_top_bar(snap: SimSnapshot) -> void:
 
 
 func _draw_feed() -> void:
-	var y := 110.0
+	var y := _margins.y + 110.0
 	for entry: Dictionary in _feed:
 		var alpha := clampf(entry["left"], 0.0, 1.0)
-		_text(Vector2(16.0, y), entry["text"], 15, Color(Palette.TEXT, alpha))
+		_text(Vector2(_margins.x + 16.0, y), entry["text"], 15, Color(Palette.TEXT, alpha))
 		y += 22.0
 
 
@@ -265,11 +340,17 @@ func _draw_tutorial() -> void:
 	# Certaines consignes ont une version tactile.
 	if touch and tr(key + "_TOUCH") != key + "_TOUCH":
 		key += "_TOUCH"
-	var width := minf(700.0, size.x - 40.0)
-	var left := (size.x - width) * 0.5
-	var top := 92.0
+	var span := top_span(size, _margins, touch)
+	var top := _top_bottom + 10.0
 	var text := tr(key)
+	var width := minf(700.0, span.y - span.x)
 	var lines := _font.get_multiline_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, width - 28.0, 15).y
+	if touch and top + lines + 44.0 > size.y - _margins.w - TouchControls.top_reach():
+		# Le panneau descendrait sur les boutons de capacités : il s'arrête avant eux.
+		span.y = minf(span.y, size.x - _margins.z - TouchControls.reach())
+		width = minf(700.0, span.y - span.x)
+		lines = _font.get_multiline_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, width - 28.0, 15).y
+	var left := fit_in_span(span, size.x, width).x
 	draw_rect(Rect2(left, top, width, lines + 44.0), Palette.PANEL)
 	draw_rect(Rect2(left, top, width, lines + 44.0), Palette.GOLD, false, 1.5)
 	var title := tr("HUD_TUTORIAL_DONE")
@@ -277,6 +358,7 @@ func _draw_tutorial() -> void:
 		title = tr("HUD_TUTORIAL_STEP") % [step + 1, TutorialDirector.STEP_DONE]
 	draw_string(_font, Vector2(left + 14.0, top + 22.0), title, HORIZONTAL_ALIGNMENT_LEFT, width - 28.0, 14, Palette.GOLD)
 	draw_multiline_string(_font, Vector2(left + 14.0, top + 44.0), text, HORIZONTAL_ALIGNMENT_LEFT, width - 28.0, 15, -1, Palette.TEXT)
+	_tutorial_bottom = top + lines + 44.0
 
 
 ## Créneau de l'éveil : il se remplit avec l'éther, puis affiche le temps d'éveil restant.
@@ -299,29 +381,32 @@ func _draw_awaken_slot(me: SimHero, rect: Rect2) -> void:
 			HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, 18, Palette.TEXT)
 
 
-## Choix de talent : deux propositions, à prendre avec les touches 1 et 2.
+## Choix de talent : deux propositions, à prendre avec les touches 1 et 2 ou en les touchant.
 func _draw_talent_choice(me: SimHero) -> void:
 	var tier := client.pending_talent_tier()
 	if tier < 0:
 		return
 	var options: Array = HeroDefs.get_def(me.def_id)["talents"][tier]
-	var box := Vector2(330.0, 92.0)
-	var gap := 14.0
-	var left := (size.x - box.x * 2.0 - gap) * 0.5
-	var top := size.y - SLOT_SIZE.y - 22.0 - 44.0 - box.y - 26.0
-	draw_rect(Rect2(left, top - 30.0, box.x * 2.0 + gap, 26.0), Palette.PANEL)
+	# En tactile, les cases passent sous le bandeau du haut (ou sous le panneau du tutoriel).
+	var rects := talent_layout(size, _margins, touch, maxf(_top_bottom, _tutorial_bottom) + 40.0)
+	var left := rects[0].position.x
+	var top := rects[0].position.y
+	var total := rects[1].end.x - left
+	draw_rect(Rect2(left, top - 30.0, total, 26.0), Palette.PANEL)
 	var title_key := "HUD_TALENT_TITLE_TOUCH" if touch else "HUD_TALENT_TITLE"
-	_text_centered(top - 11.0, tr(title_key) % SimConst.TALENT_LEVELS[tier], 16, Palette.GOLD)
+	draw_string(_font, Vector2(left, top - 11.0), tr(title_key) % SimConst.TALENT_LEVELS[tier],
+			HORIZONTAL_ALIGNMENT_CENTER, total, 16 if total >= 560.0 else 14, Palette.GOLD)
 	for i in 2:
 		var option: Dictionary = options[i]
-		var rect := Rect2(Vector2(left + i * (box.x + gap), top), box)
+		var rect := rects[i]
 		_talent_rects.append(rect)
 		draw_rect(rect, Palette.PANEL)
 		draw_rect(rect, Palette.GOLD, false, 1.5)
-		draw_string(_font, rect.position + Vector2(12.0, 26.0), "[%d]  %s" % [i + 1, tr(option["name_key"])],
-				HORIZONTAL_ALIGNMENT_LEFT, box.x - 24.0, 16, Palette.GOLD)
+		var title := tr(option["name_key"]) if touch else "[%d]  %s" % [i + 1, tr(option["name_key"])]
+		draw_string(_font, rect.position + Vector2(12.0, 26.0), title,
+				HORIZONTAL_ALIGNMENT_LEFT, rect.size.x - 24.0, 16, Palette.GOLD)
 		draw_multiline_string(_font, rect.position + Vector2(12.0, 50.0), tr(option["desc_key"]),
-				HORIZONTAL_ALIGNMENT_LEFT, box.x - 24.0, 13, 2, Palette.TEXT)
+				HORIZONTAL_ALIGNMENT_LEFT, rect.size.x - 24.0, 13, 2 if rect.size.y <= TALENT_BOX.y else 3, Palette.TEXT)
 
 
 func _draw_channel(progress: float, color: Color) -> void:
@@ -333,7 +418,8 @@ func _draw_channel(progress: float, color: Color) -> void:
 func _draw_minimap(snap: SimSnapshot) -> void:
 	var arena := client.arena
 	var half := arena.half_size
-	var map_size := Vector2(MINIMAP_WIDTH, MINIMAP_WIDTH * half.y / half.x)
+	var map_width := MINIMAP_WIDTH_TOUCH if touch else MINIMAP_WIDTH
+	var map_size := Vector2(map_width, map_width * half.y / half.x)
 	var origin := size - map_size - Vector2(16.0, 16.0)
 	if touch:
 		# En bas à droite se trouvent les boutons : la minicarte monte dans le coin du haut.

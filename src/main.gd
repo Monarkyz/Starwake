@@ -17,6 +17,7 @@ extends Node
 ##                            posant des doigts virtuels sur les commandes tactiles
 ##   --quit-after=20          quitter après ce nombre de secondes (tests)
 ##   --exit-after-events=1    le serveur s'arrête après ce nombre d'événements de jeu (tests)
+##   --ui-scale=1.5           grossir l'interface comme sur un téléphone (essais sur ordinateur)
 ##   --screenshot=fichier.png enregistrer une image juste avant de quitter (tests)
 ##   --time-scale=8           accélérer le jeu (tests ; serveur et client du même processus)
 ##   --quit-on-match-end      quitter dès que la partie se termine (tests)
@@ -43,6 +44,9 @@ func _ready() -> void:
 	Settings.load_settings()
 	if Settings.LOCALES.has(str(_opts.get("lang", ""))):
 		TranslationServer.set_locale(str(_opts["lang"]))
+
+	if not _headless:
+		UiScale.setup(get_tree().root, float(_opts.get("ui-scale", 0.0)))
 
 	if _opts.has("time-scale"):
 		# La simulation avance d'un pas fixe : accélérer, c'est faire plus de pas par seconde.

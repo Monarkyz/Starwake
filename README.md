@@ -38,6 +38,8 @@ Le jeu se joue au doigt comme au clavier et à la souris :
 
 L'interface se réorganise : la minicarte monte en haut à droite, les capacités sont sur les boutons, et tout se décale pour éviter l'encoche et les bords arrondis des téléphones. Le jeu passe en mode paysage.
 
+Sur un téléphone, toute l'interface est grossie d'après la taille réelle de l'écran (environ 40 % sur un téléphone courant), pour que les boutons soient à la taille d'un doigt : un bouton de menu mesure à peu près 7 mm de haut. Le menu passe alors sur deux colonnes, et en jeu le bandeau du haut et les talents se placent entre le bouton Menu, la minicarte et les boutons de capacités. Les tablettes gardent la mise en page d'ordinateur. Pour voir ce rendu sur ordinateur, lancer le jeu avec `--ui-scale=1.4` après `--`.
+
 Les commandes tactiles s'activent toutes seules sur mobile. Sur ordinateur, l'interrupteur **Commandes tactiles** du menu permet de les essayer à la souris (un seul doigt à la fois).
 
 ### Jeu croisé

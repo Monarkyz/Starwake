@@ -65,6 +65,7 @@ func _ready() -> void:
 	hud.touch = touch_controls != null
 	layer.add_child(hud)
 	if touch_controls != null:
+		touch_controls.reserved = hud.is_interactive_at
 		layer.add_child(touch_controls)
 
 	if client.input_source == null:

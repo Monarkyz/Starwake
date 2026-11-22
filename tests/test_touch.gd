@@ -15,6 +15,9 @@ func _init() -> void:
 	_test_ability_tap_and_manual_aim()
 	_test_heal_auto_aim()
 	_test_awaken_and_multitouch()
+	_test_interface_scale()
+	_test_reserved_areas()
+	_test_small_screen_layout()
 	print("%d checks, %d failures" % [_checks, _failures])
 	quit(1 if _failures > 0 else 0)
 
@@ -228,3 +231,73 @@ func _test_awaken_and_multitouch() -> void:
 	controls.reset()
 	_check(controls.move_vector() == Vector2.ZERO and input.build(me, _snapshot(world)).buttons == 0, "reset releases every finger")
 	controls.free()
+
+
+## Grossissement de l'interface selon la taille réelle de l'écran.
+func _test_interface_scale() -> void:
+	_check(UiScale.compute(Vector2i(1920, 1080), 96) == 1.0, "a screen without a reliable density is left alone")
+	_check(UiScale.compute(Vector2i(0, 0), 420) == 1.0, "an empty window is left alone")
+	# Téléphone courant : 2400 × 1080 à 420 points par pouce, soit 411 dp de haut.
+	var phone := UiScale.compute(Vector2i(2400, 1080), 420)
+	_check(phone > 1.35 and phone < 1.45, "the interface grows by about 40 %% on a common phone (%s)" % phone)
+	_check(is_equal_approx(UiScale.compute(Vector2i(1080, 2400), 420), phone), "the result does not depend on the orientation")
+	# Une cible de menu mesure alors au moins 45 dp (7 mm).
+	var target_dp := UiScale.TOUCH_TARGET * phone * (411.0 / UiScale.BASE_HEIGHT)
+	_check(target_dp >= 45.0, "a menu button is finger-sized on a common phone (%s dp)" % target_dp)
+	# Petit téléphone allongé : on s'arrête à 480 unités de haut.
+	_check(is_equal_approx(UiScale.compute(Vector2i(2340, 1080), 480), 1.5), "a small phone gets the largest scale")
+	# Téléphone 16:9 : on grossit moins pour garder 960 unités de large.
+	var old_phone := UiScale.compute(Vector2i(1920, 1080), 480)
+	_check(is_equal_approx(old_phone, 1280.0 / UiScale.MIN_WIDTH), "a 16:9 phone keeps enough width (%s)" % old_phone)
+	_check(UiScale.compute(Vector2i(2560, 1600), 320) == 1.0, "a tablet keeps the computer layout")
+	for dpi: int in [160, 240, 320, 420, 560, 640]:
+		for window: Vector2i in [Vector2i(1280, 720), Vector2i(2400, 1080), Vector2i(3120, 1440), Vector2i(2048, 1536)]:
+			var scale := UiScale.compute(window, dpi)
+			var logical := Vector2(window) / (minf(window.x / UiScale.BASE_WIDTH, window.y / UiScale.BASE_HEIGHT) * scale)
+			_check(scale >= 1.0 and logical.x >= UiScale.MIN_WIDTH - 0.01 and logical.y >= UiScale.MIN_HEIGHT - 0.01,
+					"the interface never gets smaller than its minimum layout (%s at %d dpi: %s)" % [window, dpi, logical])
+
+
+## Un doigt posé sur un élément de l'interface (talent, bouton Menu) n'est pas pour le joystick.
+func _test_reserved_areas() -> void:
+	var controls := _controls()
+	var talent := Rect2(300.0, 400.0, 330.0, 92.0)
+	controls.reserved = func(pos: Vector2) -> bool: return talent.has_point(pos)
+	_check(not controls.handle_touch(0, Vector2(400.0, 440.0), true), "a finger on a talent is left to the interface")
+	_check(controls.move_vector() == Vector2.ZERO and not controls.handle_touch(0, Vector2(400.0, 440.0), false),
+			"that finger never becomes the joystick")
+	_check(controls.handle_touch(1, Vector2(200.0, 600.0), true), "a finger next to the talent still grabs the joystick")
+
+
+## Sur un écran de téléphone, rien ne se chevauche : bandeau, talents, boutons.
+func _test_small_screen_layout() -> void:
+	var desktop := Hud.talent_layout(SCREEN, Vector4.ZERO, false, 0.0)
+	_check(desktop[0].position.is_equal_approx(Vector2(303.0, 458.0)) and desktop[1].end.x == 977.0,
+			"on a computer the talents stay above the ability bar (%s)" % desktop[0])
+	_check(Hud.fit_in_span(Hud.top_span(SCREEN, Vector4.ZERO, false), SCREEN.x, Hud.TOP_BAR_SIZE.x) == Vector2(310.0, 1.0),
+			"on a computer the top bar stays centred at full size")
+	var notch := Vector4(44.0, 0.0, 0.0, 21.0)
+	for screen: Vector2 in [Vector2(960.0, 540.0), Vector2(1067.0, 480.0), Vector2(1142.0, 514.0), Vector2(1600.0, 720.0)]:
+		for margins: Vector4 in [Vector4.ZERO, notch]:
+			var label := "%s with margins %s" % [screen, margins]
+			var controls := TouchControls.new()
+			controls.size = screen
+			controls.margins = margins
+			# Bandeau du haut : entre le bouton Menu et la minicarte, encore lisible.
+			var span := Hud.top_span(screen, margins, true)
+			var fit := Hud.fit_in_span(span, screen.x, Hud.TOP_BAR_SIZE.x)
+			_check(fit.x >= span.x - 0.01 and fit.x + Hud.TOP_BAR_SIZE.x * fit.y <= span.y + 0.01, "the top bar fits between the menu button and the minimap (%s)" % label)
+			_check(fit.y >= 0.75, "the top bar stays readable (%s, scale %s)" % [label, fit.y])
+			_check(span.x >= margins.x + 16.0 + Hud.LEAVE_SIZE.x, "the top bar leaves the menu button free (%s)" % label)
+			# Talents : dans l'écran, assez larges, et jamais sous un bouton de capacité.
+			var rects := Hud.talent_layout(screen, margins, true, 122.0)
+			_check(rects[0].position.x >= margins.x and rects[1].end.x <= screen.x - margins.z, "the talents stay on screen (%s)" % label)
+			_check(rects[0].size.x >= 240.0 and rects[0].end.x < rects[1].position.x, "the talents are wide enough and side by side (%s)" % label)
+			for slot in TouchControls.BUTTONS.size():
+				var center := controls.button_center(slot)
+				var radius: float = TouchControls.BUTTONS[slot][1] + TouchControls.TOUCH_SLACK
+				for rect in rects:
+					var nearest := center.clamp(rect.position, rect.end)
+					_check(nearest.distance_to(center) > radius, "no talent sits under ability button %d (%s)" % [slot, label])
+				_check(center.y - radius > 0.0 and center.x + radius - TouchControls.TOUCH_SLACK <= screen.x, "ability button %d is on screen (%s)" % [slot, label])
+			controls.free()
